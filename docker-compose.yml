@@ -1,52 +1,33 @@
-version: '3.8'
-
 services:
+  mongo:
+    image: mongo:7
+    container_name: adr-mongo
+    restart: always
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
   backend:
     build:
       context: ./backend
-      dockerfile: ../docker/Dockerfile.backend
+      dockerfile: ../docker/backend/Dockerfile
+    container_name: adr-backend
+    restart: always
     ports:
-      - "3000:3000"
-    environment:
-      - NODE_ENV=development
-      - DATABASE_URL=postgresql://user:password@db:5432/adr_db
-      - JWT_SECRET=${JWT_SECRET}
+      - "5000:3000"
     depends_on:
-      - db
-    volumes:
-      - ./backend/src:/app/src
-    networks:
-      - adr-network
+      - mongo
+    environment:
+      MONGO_URI: mongodb://mongo:27017/adr_db
 
   frontend:
     build:
       context: ./frontend
-      dockerfile: ../docker/Dockerfile.frontend
+      dockerfile: ../docker/frontend/Dockerfile
+    container_name: adr-frontend
     ports:
       - "5173:5173"
-    environment:
-      - VITE_API_URL=http://localhost:3000
-    volumes:
-      - ./frontend/src:/app/src
-    networks:
-      - adr-network
-
-  db:
-    image: postgres:15-alpine
-    environment:
-      - POSTGRES_USER=user
-      - POSTGRES_PASSWORD=password
-      - POSTGRES_DB=adr_db
-    ports:
-      - "5432:5432"
-    volumes:
-      - db_data:/var/lib/postgresql/data
-    networks:
-      - adr-network
 
 volumes:
-  db_data:
-
-networks:
-  adr-network:
-    driver: bridge
+  mongo_data:
