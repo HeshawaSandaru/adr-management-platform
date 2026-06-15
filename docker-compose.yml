@@ -15,10 +15,11 @@ services:
     container_name: adr-backend
     restart: always
     ports:
-      - "5000:3000"
+      - "3000:3000"
     depends_on:
       - mongo
     environment:
+      PORT: 3000
       MONGO_URI: mongodb://mongo:27017/adr_db
 
   frontend:
