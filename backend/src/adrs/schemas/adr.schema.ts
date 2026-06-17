@@ -3,52 +3,47 @@ import { Document } from 'mongoose';
 
 export type AdrDocument = Adr & Document;
 
-@Schema({
-  timestamps: true,
-})
+@Schema({ timestamps: true })
 export class Adr {
-  @Prop({
-    required: true,
-    trim: true,
-  })
+  @Prop({ required: true })
   title!: string;
 
-  @Prop({
-    required: true,
-  })
-  problem!: string;
+  @Prop({ required: true })
+  problemStatement!: string;
 
-  @Prop({
-    required: true,
-  })
-  solution!: string;
+  @Prop({ required: true })
+  proposedSolution!: string;
 
-  @Prop({
-    enum: [
-      'Proposed',
-      'Under Review',
-      'Approved',
-      'Rejected',
-      'Archived',
-    ],
-    default: 'Proposed',
-  })
+  @Prop({ default: 'Draft' })
   status!: string;
 
+  @Prop({ required: true })
+  author!: string;
+
+  // ✅ Alternatives (array of strings for now)
+  @Prop({ type: [String], default: [] })
+  alternatives!: string[];
+
+  // ✅ Tags for filtering/searching
+  @Prop({ type: [String], default: [] })
+  tags!: string[];
+
+  // ✅ Impact tracking fields
   @Prop()
-  authorId!: string;
+  expectedBenefits!: string;
 
-  @Prop({
-    type: [String],
-    default: [],
-  })
-  tags: string[] = [];
+  @Prop()
+  actualBenefits!: string;
 
-  @Prop({
-    type: [String],
-    default: [],
-  })
-  alternatives: string[] = [];
+  @Prop()
+  lessonsLearned!: string;
+
+  // ✅ Dependency mapping (store related ADR IDs)
+  @Prop({ type: [String], default: [] })
+  dependencies!: string[];
+
+  // timestamps automatically added:
+  // createdAt, updatedAt
 }
 
 export const AdrSchema = SchemaFactory.createForClass(Adr);
