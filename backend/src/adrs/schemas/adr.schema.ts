@@ -17,18 +17,16 @@ export class Adr {
   @Prop({ default: 'Draft' })
   status!: string;
 
+  // ✅ IMPORTANT: comes from JWT
   @Prop({ required: true })
-  author!: string;
+  authorId!: string;
 
-  // ✅ Alternatives (array of strings for now)
   @Prop({ type: [String], default: [] })
   alternatives!: string[];
 
-  // ✅ Tags for filtering/searching
   @Prop({ type: [String], default: [] })
   tags!: string[];
 
-  // ✅ Impact tracking fields
   @Prop()
   expectedBenefits!: string;
 
@@ -38,12 +36,8 @@ export class Adr {
   @Prop()
   lessonsLearned!: string;
 
-  // ✅ Dependency mapping (store related ADR IDs)
   @Prop({ type: [String], default: [] })
   dependencies!: string[];
-
-  // timestamps automatically added:
-  // createdAt, updatedAt
 }
 
 export const AdrSchema = SchemaFactory.createForClass(Adr);
