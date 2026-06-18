@@ -12,6 +12,7 @@ import { CreateAdrDto } from './dto/create-adr.dto';
 import { UpdateAdrDto } from './dto/update-adr.dto';
 import { RequestWithUser } from '../auth/interfaces/request-with-user.interface';
 import { ForbiddenException } from '@nestjs/common';
+import { Role } from '../common/enums/role.enum';
 
 @Injectable()
 export class AdrsService {
@@ -63,7 +64,7 @@ export class AdrsService {
 
     // ✅ ownership + admin bypass
     const isOwner = adr.authorId.toString() === user.userId;
-    const isAdmin = user.role === 'ADMIN';
+    const isAdmin = user.role === Role.ADMIN;
 
     if (!isOwner && !isAdmin) {
       throw new ForbiddenException(
@@ -95,7 +96,7 @@ export class AdrsService {
     }
 
     const isOwner = adr.authorId.toString() === user.userId;
-    const isAdmin = user.role === 'ADMIN';
+    const isAdmin = user.role === Role.ADMIN;;
 
     if (!isOwner && !isAdmin) {
       throw new ForbiddenException(

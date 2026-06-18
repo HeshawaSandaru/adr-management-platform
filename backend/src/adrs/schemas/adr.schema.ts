@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document } from 'mongoose';
+import { Document , Types } from 'mongoose';
 
 export type AdrDocument = Adr & Document;
 
@@ -18,8 +18,8 @@ export class Adr {
   status!: string;
 
   // ✅ IMPORTANT: comes from JWT
-  @Prop({ required: true })
-  authorId!: string;
+  @Prop({ type: Types.ObjectId, ref: 'User', required: true })
+  authorId!: Types.ObjectId
 
   @Prop({ type: [String], default: [] })
   alternatives!: string[];

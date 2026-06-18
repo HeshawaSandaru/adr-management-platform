@@ -1,18 +1,16 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
 import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
+import { ConflictException } from '@nestjs/common';
 
-import { User, UserDocument } from '../users/schemas/user.schema';
+import { UsersService } from '../users/users.service';
 import { Role } from '../common/enums/role.enum';
 import { JwtPayload } from './interfaces/jwt-payload.interface';
 
 @Injectable()
 export class AuthService {
   constructor(
-    @InjectModel(User.name)
-    private readonly userModel: Model<UserDocument>,
+    private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
   ) {}
 
@@ -20,30 +18,34 @@ export class AuthService {
   // REGISTER USER
   // =========================
   async register(dto: { name: string; email: string; password: string }) {
-    const hashedPassword = await bcrypt.hash(dto.password, 10);
+  // Check if user already exists
+  const exists = await this.usersService.findByEmail(dto.email);
 
-    const user = await this.userModel.create({
-      name: dto.name,
-      email: dto.email,
-      password: hashedPassword,
-      role: Role.USER,
-    });
-
-    return {
-      message: 'User registered successfully',
-      user: {
-        id: user._id.toString(),
-        email: user.email,
-        role: user.role,
-      },
-    };
+  if (exists) {
+    throw new ConflictException('Email is already registered');
   }
+
+  const user = await this.usersService.create(
+    dto.name,
+    dto.email,
+    dto.password,
+  );
+
+  return {
+    message: 'User registered successfully',
+    user: {
+      id: user._id.toString(),
+      email: user.email,
+      role: user.role,
+    },
+  };
+}
 
   // =========================
   // LOGIN USER
   // =========================
   async login(dto: { email: string; password: string }) {
-    const user = await this.userModel.findOne({ email: dto.email });
+    const user = await this.usersService.findByEmail(dto.email);
 
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
@@ -58,7 +60,6 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    // ✅ Strongly typed JWT payload
     const payload: JwtPayload = {
       userId: user._id.toString(),
       email: user.email,
@@ -74,5 +75,12 @@ export class AuthService {
         role: user.role,
       },
     };
+  }
+
+  // =========================
+  // GET PROFILE
+  // =========================
+  async getProfile(userId: string) {
+    return this.usersService.findById(userId);
   }
 }

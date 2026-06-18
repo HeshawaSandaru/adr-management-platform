@@ -2,6 +2,7 @@ import {
   IsString,
   IsOptional,
   IsArray,
+  IsIn,
 } from 'class-validator';
 
 export class CreateAdrDto {
@@ -15,7 +16,7 @@ export class CreateAdrDto {
   proposedSolution!: string;
 
   @IsOptional()
-  @IsString()
+  @IsIn(['Draft', 'Proposed', 'Accepted', 'Deprecated', 'Archived'])
   status?: string;
 
   @IsOptional()
