@@ -6,6 +6,7 @@ import { JwtService } from '@nestjs/jwt';
 
 import { User, UserDocument } from '../users/schemas/user.schema';
 import { Role } from '../common/enums/role.enum';
+import { JwtPayload } from './interfaces/jwt-payload.interface';
 
 @Injectable()
 export class AuthService {
@@ -25,7 +26,7 @@ export class AuthService {
       name: dto.name,
       email: dto.email,
       password: hashedPassword,
-      role: Role.USER, // ✅ FIXED (NO STRING)
+      role: Role.USER,
     });
 
     return {
@@ -57,7 +58,8 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    const payload = {
+    // ✅ Strongly typed JWT payload
+    const payload: JwtPayload = {
       userId: user._id.toString(),
       email: user.email,
       role: user.role,

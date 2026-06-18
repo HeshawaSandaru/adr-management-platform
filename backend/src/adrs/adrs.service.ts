@@ -10,6 +10,8 @@ import { Model, Types } from 'mongoose';
 import { Adr, AdrDocument } from './schemas/adr.schema';
 import { CreateAdrDto } from './dto/create-adr.dto';
 import { UpdateAdrDto } from './dto/update-adr.dto';
+import { RequestWithUser } from '../auth/interfaces/request-with-user.interface';
+import { ForbiddenException } from '@nestjs/common';
 
 @Injectable()
 export class AdrsService {
@@ -19,7 +21,7 @@ export class AdrsService {
   ) {}
 
   // ✅ CREATE ADR (WITH JWT USER)
-  async create(dto: CreateAdrDto, user: any) {
+  async create(dto: CreateAdrDto, user: RequestWithUser['user']) {
     return this.adrModel.create({
       ...dto,
       authorId: user.userId,
@@ -43,28 +45,62 @@ export class AdrsService {
 
     return adr;
   }
-
-  async update(id: string, dto: UpdateAdrDto) {
+  
+    async update(
+    id: string,
+    dto: UpdateAdrDto,
+    user: RequestWithUser['user'],
+  ) {
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException('Invalid ADR ID');
     }
 
-    const updated = await this.adrModel.findByIdAndUpdate(
-      id,
-      dto,
-      { new: true, runValidators: true },
-    );
+    const adr = await this.adrModel.findById(id).exec();
 
-    if (!updated) {
+    if (!adr) {
       throw new NotFoundException('ADR not found');
     }
+
+    // ✅ ownership + admin bypass
+    const isOwner = adr.authorId.toString() === user.userId;
+    const isAdmin = user.role === 'ADMIN';
+
+    if (!isOwner && !isAdmin) {
+      throw new ForbiddenException(
+        'You are not allowed to update this ADR',
+      );
+    }
+
+    const updated = await this.adrModel.findByIdAndUpdate(
+     id,
+     dto,
+      { new: true, runValidators: true },
+    );
 
     return updated;
   }
 
-  async archive(id: string) {
+  async archive(
+    id: string,
+    user: RequestWithUser['user'],
+  ) {
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException('Invalid ADR ID');
+    }
+
+    const adr = await this.adrModel.findById(id).exec();
+
+    if (!adr) {
+      throw new NotFoundException('ADR not found');
+    }
+
+    const isOwner = adr.authorId.toString() === user.userId;
+    const isAdmin = user.role === 'ADMIN';
+
+    if (!isOwner && !isAdmin) {
+      throw new ForbiddenException(
+        'You are not allowed to archive this ADR',
+      );
     }
 
     const updated = await this.adrModel.findByIdAndUpdate(
@@ -72,10 +108,6 @@ export class AdrsService {
       { status: 'Archived' },
       { new: true },
     );
-
-    if (!updated) {
-      throw new NotFoundException('ADR not found');
-    }
 
     return updated;
   }
