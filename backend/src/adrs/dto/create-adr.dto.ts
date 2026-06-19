@@ -3,7 +3,11 @@ import {
   IsOptional,
   IsArray,
   IsIn,
+  IsEnum,
 } from 'class-validator';
+
+
+import { AdrStatus } from '../../common/enums/adr-status.enum';
 
 export class CreateAdrDto {
   @IsString()
@@ -16,8 +20,8 @@ export class CreateAdrDto {
   proposedSolution!: string;
 
   @IsOptional()
-  @IsIn(['Draft', 'Proposed', 'Accepted', 'Deprecated', 'Archived'])
-  status?: string;
+  @IsEnum(AdrStatus)
+  status?: AdrStatus;
 
   @IsOptional()
   @IsArray()

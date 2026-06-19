@@ -7,6 +7,11 @@ services:
       - "27017:27017"
     volumes:
       - mongo_data:/data/db
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   backend:
     build:
@@ -18,18 +23,20 @@ services:
       - "3000:3000"
     depends_on:
       - mongo
+    env_file:
+      - .env  
     environment:
       PORT: 3000
       MONGO_URI: mongodb://mongo:27017/adr_db
       JWT_SECRET:  ${JWT_SECRET}
-      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN}
+      JWT_EXPIRATION: ${JWT_EXPIRATION}
 
   frontend:
     build:
       context: ./frontend
       dockerfile: ../docker/frontend/Dockerfile
       args:
-        VITE_API_URL: http://localhost:3000   
+        VITE_API_URL: http://backend:3000/api  
     container_name: adr-frontend
     ports:
       - "5173:5173"

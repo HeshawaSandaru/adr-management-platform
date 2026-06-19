@@ -1,6 +1,8 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document , Types } from 'mongoose';
 
+import { AdrStatus } from '../../common/enums/adr-status.enum';
+
 export type AdrDocument = Adr & Document;
 
 @Schema({ timestamps: true })
@@ -14,8 +16,12 @@ export class Adr {
   @Prop({ required: true })
   proposedSolution!: string;
 
-  @Prop({ default: 'Draft' })
-  status!: string;
+   @Prop({
+    type: String,
+    enum: AdrStatus,
+    default: AdrStatus.Draft,
+  })
+  status!: AdrStatus;
 
   // ✅ IMPORTANT: comes from JWT
   @Prop({ type: Types.ObjectId, ref: 'User', required: true })

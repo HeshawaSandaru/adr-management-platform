@@ -6,6 +6,7 @@ import { ConflictException } from '@nestjs/common';
 import { UsersService } from '../users/users.service';
 import { Role } from '../common/enums/role.enum';
 import { JwtPayload } from './interfaces/jwt-payload.interface';
+import { RegisterDto } from './dto/register.dto';
 
 @Injectable()
 export class AuthService {
@@ -17,29 +18,29 @@ export class AuthService {
   // =========================
   // REGISTER USER
   // =========================
-  async register(dto: { name: string; email: string; password: string }) {
+  async register(dto: RegisterDto) {
   // Check if user already exists
-  const exists = await this.usersService.findByEmail(dto.email);
+    const exists = await this.usersService.findByEmail(dto.email);
 
-  if (exists) {
-    throw new ConflictException('Email is already registered');
+    if (exists) {
+      throw new ConflictException('Email is already registered');
+    }
+
+    const user = await this.usersService.create(
+      dto.name,
+      dto.email,
+      dto.password
+    );
+
+    return {
+      message: 'User registered successfully',
+      user: {
+        id: user._id.toString(),
+        email: user.email,
+        role: user.role,
+      },
+    };
   }
-
-  const user = await this.usersService.create(
-    dto.name,
-    dto.email,
-    dto.password,
-  );
-
-  return {
-    message: 'User registered successfully',
-    user: {
-      id: user._id.toString(),
-      email: user.email,
-      role: user.role,
-    },
-  };
-}
 
   // =========================
   // LOGIN USER
