@@ -16,6 +16,7 @@ import { RequestWithUser } from "../auth/interfaces/request-with-user.interface"
 import { Role } from "../common/enums/role.enum";
 import { AdrStatus } from "../common/enums/adr-status.enum";
 import { AdrQueryDto } from "./dto/adr-query.dto";
+import { UpdateAdrStatusDto } from "./dto/update-adr-status.dto";
 
 @Injectable()
 export class AdrsService {
@@ -159,7 +160,7 @@ export class AdrsService {
 
   async updateStatus(
     id: string,
-    dto: { status: AdrStatus },
+    dto: UpdateAdrStatusDto,
     user: RequestWithUser["user"],
   ) {
     if (!Types.ObjectId.isValid(id)) {
