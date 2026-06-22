@@ -1,6 +1,14 @@
-import { IsOptional, IsEnum, IsString, Max, IsInt, Min } from 'class-validator';
-import { AdrStatus } from '../../common/enums/adr-status.enum';
-import { Type } from 'class-transformer/types/decorators/type.decorator';
+import {
+  IsOptional,
+  IsEnum,
+  IsString,
+  Max,
+  IsInt,
+  Min,
+  IsMongoId,
+} from "class-validator";
+import { AdrStatus } from "../../common/enums/adr-status.enum";
+import { Type } from "class-transformer/types/decorators/type.decorator";
 
 export class AdrQueryDto {
   @IsOptional()
@@ -8,7 +16,7 @@ export class AdrQueryDto {
   status?: AdrStatus;
 
   @IsOptional()
-  @IsString()
+  @IsMongoId()
   authorId?: string;
 
   @IsOptional()
@@ -16,16 +24,15 @@ export class AdrQueryDto {
   tags?: string;
 
   @IsOptional()
-  @Type(() => Number)   // transforms query string "1" → number 1
+  @Type(() => Number) // transforms query string "1" → number 1
   @IsInt()
   @Min(1)
   page?: number = 1;
 
   @IsOptional()
-  @Type(() => Number)   // transforms query string "20" → number 20
+  @Type(() => Number) // transforms query string "20" → number 20
   @IsInt()
   @Min(1)
   @Max(100)
   limit?: number = 20;
-
 }
