@@ -28,36 +28,47 @@ export class AdrsService {
   async create(dto: CreateAdrDto, user: RequestWithUser['user']) {
     return this.adrModel.create({
       ...dto,
-      status: AdrStatus.Draft,
       authorId: user.userId,
+      status: AdrStatus.Draft,
     });
   }
 
   async findAll(query: AdrQueryDto) {
-  const filter: any = {};
+    const filter: any = {};
 
-  if (query.status) {
-    filter.status = query.status;
+    if (query.status) {
+      filter.status = query.status;
+    }
+
+    if (query.authorId) {
+      filter.authorId = query.authorId;
+    }
+
+    if (query.tags) {
+      filter.tags = {
+        $in: query.tags
+          .split(',')
+          .map((t: string) => t.trim())
+          .filter(Boolean),
+      };
+    }
+
+    const page = Math.max(1, query.page ?? 1);
+    const limit = Math.min(100, query.limit ?? 20); // cap at 100
+    const skip = (page - 1) * limit;
+
+    const [data, total] = await Promise.all([
+      this.adrModel
+        .find(filter)
+        .populate('authorId', 'name email')
+        .skip(skip)
+        .limit(limit)
+        .exec(),
+      this.adrModel.countDocuments(filter).exec(),
+    ]);
+
+    return { data, total, page, limit };
   }
-
-  if (query.authorId) {
-    filter.authorId = query.authorId;
-  }
-
-  if (query.tags) {
-    filter.tags = {
-      $in: query.tags
-        .split(',')
-        .map((t: string) => t.trim())
-        .filter(Boolean),
-    };
-  }
-
-  return this.adrModel
-  .find(filter)
-  .populate('authorId', 'name email')
-  .exec();
-}
 
   async findOne(id: string) {
     if (!Types.ObjectId.isValid(id)) {
@@ -82,26 +93,29 @@ export class AdrsService {
       throw new BadRequestException('Invalid ADR ID');
     }
 
-    const adr = await this.adrModel.findById(id).exec();
-
-    if (!adr) {
-      throw new NotFoundException('ADR not found');
-    }
-
-    // ✅ ownership + admin bypass
-    const isOwner = adr.authorId.toString() === user.userId;
     const isAdmin = user.role === Role.ADMIN;
 
-    if (!isOwner && !isAdmin) {
+    const filter = isAdmin
+      ? { _id: id }
+      : { _id: id, authorId: user.userId };
+
+    const updated = await this.adrModel.findOneAndUpdate(
+      filter,
+      { $set: dto },
+      {
+        new: true,
+        runValidators: true,
+      },
+    );
+
+    if (!updated) {
       throw new ForbiddenException(
-        'You are not allowed to update this ADR',
+        'Not allowed or ADR not found',
       );
     }
 
-    Object.assign(adr, dto);
-    await adr.save();
+    return updated;
 
-    return adr;
   }
 
   async archive(
@@ -118,9 +132,12 @@ export class AdrsService {
       throw new NotFoundException('ADR not found');
     }
 
-    if (user.role !== Role.ADMIN) {
+    const isOwner = adr.authorId.toString() === user.userId;
+    const isAdmin = user.role === Role.ADMIN;
+
+    if (!isOwner && !isAdmin) {
       throw new ForbiddenException(
-        'Only administrators can archive ADRs',
+        'You are not allowed to archive this ADR',
       );
     }
 
@@ -173,7 +190,7 @@ export class AdrsService {
       );
     }
 
-    // 🔥 enforce workflow rules
+    //  enforce workflow rules
     this.validateStatusTransition(adr.status, dto.status);
 
     adr.status = dto.status;

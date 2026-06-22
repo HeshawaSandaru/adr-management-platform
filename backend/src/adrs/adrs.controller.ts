@@ -58,8 +58,7 @@ export class AdrsController {
   }
 
   @Patch(':id/archive')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.ADMIN)
+  @UseGuards(JwtAuthGuard)
   archive(
     @Param('id') id: string,
     @Req() req: RequestWithUser,

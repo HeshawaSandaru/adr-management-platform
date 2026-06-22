@@ -20,10 +20,6 @@ export class CreateAdrDto {
   proposedSolution!: string;
 
   @IsOptional()
-  @IsEnum(AdrStatus)
-  status?: AdrStatus;
-
-  @IsOptional()
   @IsArray()
   alternatives?: string[];
 
