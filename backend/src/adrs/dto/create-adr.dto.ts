@@ -1,7 +1,5 @@
 import { IsString, IsOptional, IsArray } from "class-validator";
 
-import { AdrStatus } from "../../common/enums/adr-status.enum";
-
 export class CreateAdrDto {
   @IsString()
   title!: string;

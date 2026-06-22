@@ -166,25 +166,45 @@ export class AdrsService {
       throw new BadRequestException("Invalid ADR ID");
     }
 
-    const adr = await this.adrModel.findById(id).exec();
-
-    if (!adr) {
-      throw new NotFoundException("ADR not found");
-    }
-
-    const isOwner = adr.authorId.toString() === user.userId;
     const isAdmin = user.role === Role.ADMIN;
+    const ownerFilter = isAdmin
+      ? { _id: id }
+      : { _id: id, authorId: user.userId };
 
-    if (!isOwner && !isAdmin) {
-      throw new ForbiddenException("You are not allowed to change ADR status");
+    // Read current state (for validation only)
+    const current = await this.adrModel
+      .findOne(ownerFilter)
+      .select("status")
+      .exec();
+
+    if (!current) {
+      throw new ForbiddenException("Not allowed or ADR not found");
     }
 
-    //  enforce workflow rules
-    this.validateStatusTransition(adr.status, dto.status);
+    // Validate transition before writing
+    this.validateStatusTransition(current.status, dto.status);
 
-    adr.status = dto.status;
-    await adr.save();
+    // Atomic update with optimistic concurrency guard
+    const updated = await this.adrModel.findOneAndUpdate(
+      {
+        ...ownerFilter,
+        status: current.status, // ensures no concurrent modification happened
+      },
+      {
+        $set: { status: dto.status },
+      },
+      {
+        new: true,
+        runValidators: true,
+      },
+    );
 
-    return adr;
+    if (!updated) {
+      throw new BadRequestException(
+        "Status changed concurrently, please retry",
+      );
+    }
+
+    return updated;
   }
 }
