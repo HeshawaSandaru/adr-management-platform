@@ -1,7 +1,6 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, ConflictException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
-import { ConflictException } from '@nestjs/common';
 
 import { UsersService } from '../users/users.service';
 import { Role } from '../common/enums/role.enum';
@@ -82,6 +81,12 @@ export class AuthService {
   // GET PROFILE
   // =========================
   async getProfile(userId: string) {
-    return this.usersService.findById(userId);
+    const user = await this.usersService.findById(userId);
+
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    return user;
   }
 }

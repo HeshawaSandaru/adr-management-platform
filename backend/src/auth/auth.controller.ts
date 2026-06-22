@@ -13,8 +13,10 @@ import { JwtAuthGuard } from './jwt-auth.guard';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { RequestWithUser } from './interfaces/request-with-user.interface';
+import { ApiBearerAuth } from '@nestjs/swagger';
 
 @Controller('auth')
+@ApiBearerAuth('JWT-auth')
 export class AuthController {
   constructor(private authService: AuthService) {}
 

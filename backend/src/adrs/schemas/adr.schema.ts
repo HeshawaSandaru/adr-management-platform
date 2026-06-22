@@ -47,3 +47,7 @@ export class Adr {
 }
 
 export const AdrSchema = SchemaFactory.createForClass(Adr);
+
+AdrSchema.index({ status: 1 });
+AdrSchema.index({ authorId: 1 });
+AdrSchema.index({ tags: 1 });

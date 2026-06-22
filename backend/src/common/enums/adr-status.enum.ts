@@ -2,6 +2,6 @@ export enum AdrStatus {
   Draft = 'Draft',
   Proposed = 'Proposed',
   Accepted = 'Accepted',
-  Deprecated = 'Deprecated',
+  Rejected = 'Rejected',
   Archived = 'Archived',
 }
