@@ -1,4 +1,4 @@
-import { IsEnum, IsString } from 'class-validator';
+import { IsEnum, IsString, MinLength } from 'class-validator';
 
 import { ReviewDecision } from '../../common/enums/review-decision.enum';
 
@@ -7,5 +7,6 @@ export class CreateReviewDto {
   decision!: ReviewDecision;
 
   @IsString()
+  @MinLength(1)
   comment!: string;
 }

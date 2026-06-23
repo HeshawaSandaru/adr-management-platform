@@ -3,6 +3,7 @@ import {
   NotFoundException,
   ForbiddenException,
   BadRequestException,
+  ConflictException,
 } from '@nestjs/common';
 
 import { InjectModel } from '@nestjs/mongoose';
@@ -52,6 +53,14 @@ export class ReviewsService {
       throw new ForbiddenException(
         'ADR author cannot review their own ADR',
       );
+    }
+
+    const existing = await this.reviewModel.findOne({
+      adrId,
+      reviewerId: user.userId,
+    });
+    if (existing) {
+      throw new ConflictException("You have already reviewed this ADR");
     }
 
     return this.reviewModel.create({

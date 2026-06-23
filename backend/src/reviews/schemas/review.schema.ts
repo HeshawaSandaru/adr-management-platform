@@ -2,6 +2,7 @@ import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
 
 import { ReviewDecision } from '../../common/enums/review-decision.enum';
+import { Adr } from '../../adrs/schemas/adr.schema';
 
 export type ReviewDocument = Review & Document;
 
@@ -9,14 +10,14 @@ export type ReviewDocument = Review & Document;
 export class Review {
   @Prop({
     type: Types.ObjectId,
-    ref: 'Adr',
+    ref: 'Adr.name',
     required: true,
   })
   adrId!: Types.ObjectId;
 
   @Prop({
     type: Types.ObjectId,
-    ref: 'User',
+    ref: 'User.name',
     required: true,
   })
   reviewerId!: Types.ObjectId;
@@ -36,3 +37,8 @@ export const ReviewSchema = SchemaFactory.createForClass(Review);
 
 ReviewSchema.index({ adrId: 1 });
 ReviewSchema.index({ reviewerId: 1 });
+
+ReviewSchema.index(
+  { adrId: 1, reviewerId: 1 },
+  { unique: true },
+);

@@ -20,5 +20,6 @@ import { AdrsService } from './adrs.service';
   ],
   controllers: [AdrsController],
   providers: [AdrsService],
+  exports: [MongooseModule],
 })
 export class AdrsModule {}
