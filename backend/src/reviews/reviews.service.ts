@@ -82,7 +82,6 @@ export class ReviewsService {
       throw new NotFoundException("ADR not found");
     }
 
-
     return this.reviewModel
       .find({ adrId })
       .populate('reviewerId', 'name email')

@@ -19,10 +19,6 @@ import { AdrsModule } from '../adrs/adrs.module';
         name: Review.name,
         schema: ReviewSchema,
       },
-      {
-        name: Adr.name,
-        schema: AdrSchema,
-      },
     ]),
   ],
   controllers: [ReviewsController],
