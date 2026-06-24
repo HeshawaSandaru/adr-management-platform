@@ -3,6 +3,7 @@ import { Document, Types } from 'mongoose';
 
 import { ReviewDecision } from '../../common/enums/review-decision.enum';
 import { Adr } from '../../adrs/schemas/adr.schema';
+import { User } from '../../users/schemas/user.schema';
 
 export type ReviewDocument = Review & Document;
 
@@ -10,14 +11,14 @@ export type ReviewDocument = Review & Document;
 export class Review {
   @Prop({
     type: Types.ObjectId,
-    ref: 'Adr.name',
+    ref: Adr.name,
     required: true,
   })
   adrId!: Types.ObjectId;
 
   @Prop({
     type: Types.ObjectId,
-    ref: 'User.name',
+    ref: User.name,
     required: true,
   })
   reviewerId!: Types.ObjectId;

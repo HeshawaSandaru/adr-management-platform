@@ -76,10 +76,18 @@ export class ReviewsService {
       throw new BadRequestException('Invalid ADR ID');
     }
 
+    const adrExists = await this.adrModel.exists({ _id: adrId });
+
+    if (!adrExists) {
+      throw new NotFoundException("ADR not found");
+    }
+
+
     return this.reviewModel
       .find({ adrId })
       .populate('reviewerId', 'name email')
       .sort({ createdAt: -1 })
+      .limit(50)
       .exec();
   }
 }

@@ -9,13 +9,11 @@ import {
   ReviewSchema,
 } from './schemas/review.schema';
 
-import {
-  Adr,
-  AdrSchema,
-} from '../adrs/schemas/adr.schema';
+import { AdrsModule } from '../adrs/adrs.module';
 
 @Module({
   imports: [
+    AdrsModule,
     MongooseModule.forFeature([
       {
         name: Review.name,
