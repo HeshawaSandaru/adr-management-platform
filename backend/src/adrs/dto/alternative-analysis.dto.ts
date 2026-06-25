@@ -6,6 +6,7 @@ import {
 
 export class AlternativeAnalysisDto {
   @IsString()
+  @IsNotEmpty()
   alternative!: string;
 
   @IsOptional()

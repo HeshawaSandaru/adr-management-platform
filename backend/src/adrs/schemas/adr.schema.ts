@@ -2,6 +2,7 @@ import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document , Types } from 'mongoose';
 
 import { AdrStatus } from '../../common/enums/adr-status.enum';
+import { User } from '../../users/schemas/user.schema';
 
 export type AdrDocument = Adr & Document;
 
@@ -24,25 +25,19 @@ export class Adr {
   status!: AdrStatus;
 
   // ✅ IMPORTANT: comes from JWT
-  @Prop({ type: Types.ObjectId, ref: "User", required: true })
+  @Prop({ type: Types.ObjectId, ref: User.name, required: true })
   authorId!: Types.ObjectId;
 
-  @Prop([
-    {
-      alternative: {
-        type: String,
-        required: true,
+  @Prop({
+    type: [
+      {
+        alternative: { type: String, required: true },
+        pros: { type: [String], default: [] },
+        cons: { type: [String], default: [] },
       },
-      pros: {
-        type: [String],
-        default: [],
-      },
-      cons: {
-        type: [String],
-        default: [],
-      },
-    },
-  ])
+    ],
+    default: [],
+  })
   alternativeAnalysis!: {
     alternative: string;
     pros: string[];
