@@ -16,7 +16,7 @@ export class Adr {
   @Prop({ required: true })
   proposedSolution!: string;
 
-   @Prop({
+  @Prop({
     type: String,
     enum: AdrStatus,
     default: AdrStatus.Draft,
@@ -24,11 +24,30 @@ export class Adr {
   status!: AdrStatus;
 
   // ✅ IMPORTANT: comes from JWT
-  @Prop({ type: Types.ObjectId, ref: 'User', required: true })
-  authorId!: Types.ObjectId
+  @Prop({ type: Types.ObjectId, ref: "User", required: true })
+  authorId!: Types.ObjectId;
 
-  @Prop({ type: [String], default: [] })
-  alternatives!: string[];
+  @Prop([
+    {
+      alternative: {
+        type: String,
+        required: true,
+      },
+      pros: {
+        type: [String],
+        default: [],
+      },
+      cons: {
+        type: [String],
+        default: [],
+      },
+    },
+  ])
+  alternativeAnalysis!: {
+    alternative: string;
+    pros: string[];
+    cons: string[];
+  }[];
 
   @Prop({ type: [String], default: [] })
   tags!: string[];

@@ -1,4 +1,8 @@
-import { IsString, IsOptional, IsArray } from "class-validator";
+import { IsString, IsOptional, IsArray, ValidateNested,} from "class-validator";
+
+import { Type } from 'class-transformer';
+import { AlternativeAnalysisDto } from './alternative-analysis.dto';
+
 
 export class CreateAdrDto {
   @IsString()
@@ -12,7 +16,9 @@ export class CreateAdrDto {
 
   @IsOptional()
   @IsArray()
-  alternatives?: string[];
+  @ValidateNested({ each: true })
+  @Type(() => AlternativeAnalysisDto)
+  alternativeAnalysis?: AlternativeAnalysisDto[];
 
   @IsOptional()
   @IsArray()
