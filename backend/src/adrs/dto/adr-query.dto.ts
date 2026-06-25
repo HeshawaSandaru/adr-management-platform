@@ -8,7 +8,7 @@ import {
   IsMongoId,
 } from "class-validator";
 import { AdrStatus } from "../../common/enums/adr-status.enum";
-import { Type } from "class-transformer/types/decorators/type.decorator";
+import { Type } from 'class-transformer';
 
 export class AdrQueryDto {
   @IsOptional()
