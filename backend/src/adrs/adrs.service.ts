@@ -208,4 +208,83 @@ export class AdrsService {
 
     return updated;
   }
+
+  //dependencies
+
+  async addDependency(
+    id: string,
+    dependencyId: string,
+    user: RequestWithUser["user"],
+  ) {
+    if (!Types.ObjectId.isValid(id) || !Types.ObjectId.isValid(dependencyId)) {
+      throw new BadRequestException("Invalid ADR ID");
+    }
+
+    if (id === dependencyId) {
+      throw new BadRequestException("ADR cannot depend on itself");
+    }
+
+    const adr = await this.adrModel.findById(id);
+    const dependency = await this.adrModel.findById(dependencyId);
+
+    if (!adr || !dependency) {
+      throw new NotFoundException("ADR or Dependency not found");
+    }
+
+    const isAdmin = user.role === Role.ADMIN;
+    const isOwner = adr.authorId.toString() === user.userId;
+
+    if (!isAdmin && !isOwner) {
+      throw new ForbiddenException("Not allowed");
+    }
+
+    const updated = await this.adrModel.findByIdAndUpdate(
+      id,
+      {
+        $addToSet: { dependencies: dependency._id },
+      },
+      { new: true },
+    );
+
+    return updated;
+  }
+
+  async removeDependency(
+    id: string,
+    dependencyId: string,
+    user: RequestWithUser["user"],
+  ) {
+    const isAdmin = user.role === Role.ADMIN;
+
+    const adr = await this.adrModel.findById(id);
+
+    if (!adr) {
+      throw new NotFoundException("ADR not found");
+    }
+
+    if (!isAdmin && adr.authorId.toString() !== user.userId) {
+      throw new ForbiddenException("Not allowed");
+    }
+
+    return this.adrModel.findByIdAndUpdate(
+      id,
+      {
+        $pull: { dependencies: dependencyId },
+      },
+      { new: true },
+    );
+  }
+
+  async getDependencies(id: string) {
+    const adr = await this.adrModel
+      .findById(id)
+      .populate("dependencies", "title status")
+      .exec();
+
+    if (!adr) {
+      throw new NotFoundException("ADR not found");
+    }
+
+    return adr.dependencies;
+  }
 }

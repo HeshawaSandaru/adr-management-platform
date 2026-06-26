@@ -9,6 +9,7 @@ import {
   UseGuards,
   Req,
   Query,
+  Delete,
 } from '@nestjs/common';
 
 import { AdrsService } from './adrs.service';
@@ -20,6 +21,7 @@ import { RequestWithUser } from '../auth/interfaces/request-with-user.interface'
 import { ApiBearerAuth } from '@nestjs/swagger';
 import { UpdateAdrStatusDto } from './dto/update-adr-status.dto';
 import { AdrQueryDto } from './dto/adr-query.dto';
+import { AddDependencyDto } from './dto/add-dependency.dto';
 
 @Controller("adrs")
 @ApiBearerAuth("JWT-auth")
@@ -68,5 +70,31 @@ export class AdrsController {
     @Req() req: RequestWithUser,
   ) {
     return this.adrsService.updateStatus(id, dto, req.user);
+  }
+
+  @Patch(":id/dependencies")
+  @UseGuards(JwtAuthGuard)
+  addDependency(
+    @Param("id") id: string,
+    @Body() dto: AddDependencyDto,
+    @Req() req: RequestWithUser,
+  ) {
+    return this.adrsService.addDependency(id, dto.dependencyId, req.user);
+  }
+
+  @Delete(":id/dependencies/:dependencyId")
+  @UseGuards(JwtAuthGuard)
+  removeDependency(
+    @Param("id") id: string,
+    @Param("dependencyId") dependencyId: string,
+    @Req() req: RequestWithUser,
+  ) {
+    return this.adrsService.removeDependency(id, dependencyId, req.user);
+  }
+
+  @Get(":id/dependencies")
+  @UseGuards(JwtAuthGuard)
+  getDependencies(@Param("id") id: string) {
+    return this.adrsService.getDependencies(id);
   }
 }

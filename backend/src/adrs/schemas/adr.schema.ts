@@ -16,7 +16,7 @@ export class Adr {
   @Prop({ required: true })
   proposedSolution!: string;
 
-   @Prop({
+  @Prop({
     type: String,
     enum: AdrStatus,
     default: AdrStatus.Draft,
@@ -24,8 +24,8 @@ export class Adr {
   status!: AdrStatus;
 
   // ✅ IMPORTANT: comes from JWT
-  @Prop({ type: Types.ObjectId, ref: 'User', required: true })
-  authorId!: Types.ObjectId
+  @Prop({ type: Types.ObjectId, ref: "User", required: true })
+  authorId!: Types.ObjectId;
 
   @Prop({ type: [String], default: [] })
   alternatives!: string[];
@@ -42,8 +42,13 @@ export class Adr {
   @Prop()
   lessonsLearned!: string;
 
-  @Prop({ type: [String], default: [] })
-  dependencies!: string[];
+  @Prop([
+    {
+      type: Types.ObjectId,
+      ref: "Adr",
+    },
+  ])
+  dependencies!: Types.ObjectId[];
 }
 
 export const AdrSchema = SchemaFactory.createForClass(Adr);
@@ -51,3 +56,4 @@ export const AdrSchema = SchemaFactory.createForClass(Adr);
 AdrSchema.index({ status: 1 });
 AdrSchema.index({ authorId: 1 });
 AdrSchema.index({ tags: 1 });
+AdrSchema.index({ dependencies: 1 });
