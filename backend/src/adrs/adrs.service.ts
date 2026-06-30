@@ -263,20 +263,20 @@ export class AdrsService {
     const isAdmin = user.role === Role.ADMIN;
 
     const updated = await this.adrModel.findOneAndUpdate(
-    {
-      _id: id,
-      ...(isAdmin ? {} : { authorId: user.userId }),
-    },
-    {
-      $pull: { dependencies: new Types.ObjectId(dependencyId) },
-    },
+      {
+        _id: id,
+        ...(isAdmin ? {} : { authorId: user.userId }),
+      },
+      {
+        $pull: { dependencies: new Types.ObjectId(dependencyId) },
+      },
       { new: true },
     );
-     if (!updated) {
-    throw new ForbiddenException("Not allowed or ADR not found");
-  }
+    if (!updated) {
+      throw new ForbiddenException("Not allowed or ADR not found");
+    }
 
-  return updated;
+    return updated;
   }
 
   async getDependencies(id: string) {
