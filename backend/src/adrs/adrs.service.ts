@@ -208,4 +208,90 @@ export class AdrsService {
 
     return updated;
   }
+
+  //dependencies
+
+  async addDependency(
+    id: string,
+    dependencyId: string,
+    user: RequestWithUser["user"],
+  ) {
+    if (!Types.ObjectId.isValid(id) || !Types.ObjectId.isValid(dependencyId)) {
+      throw new BadRequestException("Invalid ADR ID");
+    }
+
+    if (id === dependencyId) {
+      throw new BadRequestException("ADR cannot depend on itself");
+    }
+
+    const dependency = await this.adrModel.findById(dependencyId);
+
+    if (!dependency) {
+      throw new NotFoundException("Dependency not found");
+    }
+
+    const isAdmin = user.role === Role.ADMIN;
+
+    const updated = await this.adrModel.findOneAndUpdate(
+      {
+        _id: id,
+        ...(isAdmin ? {} : { authorId: user.userId }),
+      },
+      {
+        $addToSet: { dependencies: new Types.ObjectId(dependencyId) },
+      },
+      {
+        new: true,
+      },
+    );
+    if (!updated) {
+      throw new ForbiddenException("Not allowed or ADR not found");
+    }
+
+    return updated;
+  }
+
+  async removeDependency(
+    id: string,
+    dependencyId: string,
+    user: RequestWithUser["user"],
+  ) {
+    if (!Types.ObjectId.isValid(id) || !Types.ObjectId.isValid(dependencyId)) {
+      throw new BadRequestException("Invalid ADR ID");
+    }
+
+    const isAdmin = user.role === Role.ADMIN;
+
+    const updated = await this.adrModel.findOneAndUpdate(
+      {
+        _id: id,
+        ...(isAdmin ? {} : { authorId: user.userId }),
+      },
+      {
+        $pull: { dependencies: new Types.ObjectId(dependencyId) },
+      },
+      { new: true },
+    );
+    if (!updated) {
+      throw new ForbiddenException("Not allowed or ADR not found");
+    }
+
+    return updated;
+  }
+
+  async getDependencies(id: string) {
+    if (!Types.ObjectId.isValid(id)) {
+      throw new BadRequestException("Invalid ADR ID");
+    }
+    const adr = await this.adrModel
+      .findById(id)
+      .populate("dependencies", "title status")
+      .exec();
+
+    if (!adr) {
+      throw new NotFoundException("ADR not found");
+    }
+
+    return adr.dependencies;
+  }
 }

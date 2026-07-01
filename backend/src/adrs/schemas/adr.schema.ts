@@ -56,8 +56,13 @@ export class Adr {
   @Prop()
   lessonsLearned!: string;
 
-  @Prop({ type: [String], default: [] })
-  dependencies!: string[];
+  @Prop([
+    {
+      type: Types.ObjectId,
+      ref: "Adr",
+    },
+  ])
+  dependencies!: Types.ObjectId[];
 }
 
 export const AdrSchema = SchemaFactory.createForClass(Adr);
@@ -65,3 +70,4 @@ export const AdrSchema = SchemaFactory.createForClass(Adr);
 AdrSchema.index({ status: 1 });
 AdrSchema.index({ authorId: 1 });
 AdrSchema.index({ tags: 1 });
+AdrSchema.index({ dependencies: 1 });
