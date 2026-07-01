@@ -26,13 +26,9 @@ export class DashboardService {
   async getDashboard(user: RequestWithUser["user"]) {
     const isAdmin = user.role === Role.ADMIN;
 
-    const adrFilter = isAdmin
-      ? {}
-      : { authorId: user.userId };
+    const adrFilter = isAdmin ? {} : { authorId: user.userId };
 
-    const reviewFilter = isAdmin
-      ? {}
-      : { reviewerId: user.userId };
+    const reviewFilter = isAdmin ? {} : { reviewerId: user.userId };
 
     const [
       totalAdrs,
@@ -87,7 +83,7 @@ export class DashboardService {
 
       this.reviewModel.countDocuments({
         ...reviewFilter,
-        decision: ReviewDecision.RequestChanges,
+        decision: ReviewDecision.CHANGES_REQUESTED,
       }),
     ]);
 
@@ -104,8 +100,6 @@ export class DashboardService {
       approvedReviews,
       rejectedReviews,
       changesRequestedReviews,
-
-      
     };
   }
 
