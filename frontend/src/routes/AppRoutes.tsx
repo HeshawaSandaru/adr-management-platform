@@ -9,6 +9,14 @@ function ADRs() {
   return <h2>ADR List</h2>;
 }
 
+function CreateADR() {
+  return <h2>Create ADR</h2>;
+}
+
+function NotFound() {
+  return <h2>404 - Page Not Found</h2>;
+}
+
 export default function AppRoutes() {
   return (
     <Routes>
@@ -36,6 +44,19 @@ export default function AppRoutes() {
           </ProtectedRoute>
         }
       />
+
+      <Route
+        path="/adrs/create"
+        element={
+          <ProtectedRoute>
+            <AppLayout>
+              <CreateADR />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route path="*" element={<NotFound />} />
     </Routes>
   );
 }
