@@ -46,12 +46,6 @@ export default function Register() {
 
         <form onSubmit={handleRegister} noValidate className="space-y-4">
           <div>
-            <label
-              htmlFor="name"
-              className="block text-sm font-medium text-gray-700 mb-1"
-            >
-              Name
-            </label>
             <TextInput
               id="name"
               label="Name"
@@ -64,12 +58,6 @@ export default function Register() {
           </div>
 
           <div>
-            <label
-              htmlFor="email"
-              className="block text-sm font-medium text-gray-700 mb-1"
-            >
-              Email
-            </label>
             <TextInput
               id="email"
               label="Email"
@@ -82,12 +70,6 @@ export default function Register() {
           </div>
 
           <div>
-            <label
-              htmlFor="password"
-              className="block text-sm font-medium text-gray-700 mb-1"
-            >
-              Password
-            </label>
             <TextInput
               id="password"
               label="Password"
@@ -98,7 +80,6 @@ export default function Register() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
-            <p className="text-xs text-gray-500 mt-1">At least 6 characters</p>
           </div>
 
           {error && (

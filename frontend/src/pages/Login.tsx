@@ -36,12 +36,6 @@ export default function Login() {
 
         <form onSubmit={handleLogin} noValidate className="space-y-4">
           <div>
-            <label
-              htmlFor="email"
-              className="block text-sm font-medium text-gray-700 mb-1"
-            >
-              Email
-            </label>
             <TextInput
               id="email"
               label="Email"
@@ -54,12 +48,6 @@ export default function Login() {
           </div>
 
           <div>
-            <label
-              htmlFor="password"
-              className="block text-sm font-medium text-gray-700 mb-1"
-            >
-              Password
-            </label>
             <TextInput
               id="password"
               label="Password"
