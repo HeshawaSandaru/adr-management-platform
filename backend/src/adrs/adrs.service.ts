@@ -54,6 +54,11 @@ export class AdrsService {
       };
     }
 
+    if (query.title) {
+      const escaped = query.title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      filter.title = { $regex: escaped, $options: "i" };
+    }
+
     const page = Math.max(1, query.page ?? 1);
     const limit = Math.min(100, query.limit ?? 20); // cap at 100
     const skip = (page - 1) * limit;
@@ -76,7 +81,11 @@ export class AdrsService {
       throw new BadRequestException("Invalid ADR ID");
     }
 
-    const adr = await this.adrModel.findById(id).exec();
+    const adr = await this.adrModel
+      .findById(id)
+      .populate("authorId", "name email")
+      .populate("dependencies", "title status")
+      .exec();
 
     if (!adr) {
       throw new NotFoundException("ADR not found");
