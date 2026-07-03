@@ -134,8 +134,7 @@ export default function ADRListPage() {
               <tr key={adr._id} className="border-t">
                 <td>{adr.title}</td>
                 <td>{adr.status}</td>
-                <td>{adr.authorId?.name || adr.authorId || "Unknown"}</td>
-                <td className="space-x-2">
+                <td>{typeof adr.authorId === "string" ? adr.authorId : adr.authorId?.name || "Unknown"}</td>
                   <button
                     onClick={() => navigate(`/adrs/${adr._id}`)}
                     className="text-blue-600"
