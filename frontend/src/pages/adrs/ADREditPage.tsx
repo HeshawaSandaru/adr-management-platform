@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { AdrService } from "../../services/adr.service";
+import { useAuth } from "../../auth/AuthContext";
 import TextInput from "../../components/TextInput";
 
 export default function ADREditPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   const [title, setTitle] = useState("");
   const [problemStatement, setProblemStatement] = useState("");
@@ -23,6 +25,8 @@ export default function ADREditPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [isOwner, setIsOwner] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -47,12 +51,14 @@ export default function ADREditPage() {
             cons: alt.cons || [],
           }))
         );
+        setIsAdmin(user?.role === "admin");
+        setIsOwner(user?.id === data.authorId?._id);
       })
       .catch((err: any) => {
         setError(err?.response?.data?.message || "Failed to load ADR");
       })
       .finally(() => setLoading(false));
-  }, [id]);
+  }, [id, user]);
 
   const handleUpdate = async () => {
     if (!id) return;
@@ -61,23 +67,28 @@ export default function ADREditPage() {
     setSubmitting(true);
 
     try {
-      await AdrService.update(id, {
-        title,
-        problemStatement,
-        proposedSolution,
-        expectedBenefits: expectedBenefits || undefined,
-        actualBenefits: actualBenefits || undefined,
-        lessonsLearned: lessonsLearned || undefined,
-        tags: tagsText
+      const updatePayload: any = {
+        alternativeAnalysis: alternativeAnalysis.length ? alternativeAnalysis : undefined,
+      };
+
+      if (isOwner || isAdmin) {
+        updatePayload.title = title;
+        updatePayload.problemStatement = problemStatement;
+        updatePayload.proposedSolution = proposedSolution;
+        updatePayload.expectedBenefits = expectedBenefits || undefined;
+        updatePayload.actualBenefits = actualBenefits || undefined;
+        updatePayload.lessonsLearned = lessonsLearned || undefined;
+        updatePayload.tags = tagsText
           .split(",")
           .map((tag) => tag.trim())
-          .filter(Boolean),
-        dependencies: dependenciesText
+          .filter(Boolean);
+        updatePayload.dependencies = dependenciesText
           .split(",")
           .map((id) => id.trim())
-          .filter(Boolean),
-        alternativeAnalysis: alternativeAnalysis.length ? alternativeAnalysis : undefined,
-      });
+          .filter(Boolean);
+      }
+
+      await AdrService.update(id, updatePayload);
 
       navigate(`/adrs/${id}`);
     } catch (err: any) {
@@ -99,79 +110,87 @@ export default function ADREditPage() {
         </div>
       )}
 
-      <TextInput id="title" label="Title" value={title} onChange={(e) => setTitle(e.target.value)} />
-      <TextInput id="problem" label="Problem" value={problemStatement} onChange={(e) => setProblemStatement(e.target.value)} />
-      <TextInput id="solution" label="Solution" value={proposedSolution} onChange={(e) => setProposedSolution(e.target.value)} />
+      {isOwner || isAdmin ? (
+        <>
+          <TextInput id="title" label="Title" value={title} onChange={(e) => setTitle(e.target.value)} />
+          <TextInput id="problem" label="Problem" value={problemStatement} onChange={(e) => setProblemStatement(e.target.value)} />
+          <TextInput id="solution" label="Solution" value={proposedSolution} onChange={(e) => setProposedSolution(e.target.value)} />
 
-      <div>
-        <label htmlFor="expectedBenefits" className="block text-sm font-medium text-gray-700 mb-1">
-          Expected Benefits
-        </label>
-        <textarea
-          id="expectedBenefits"
-          value={expectedBenefits}
-          onChange={(e) => setExpectedBenefits(e.target.value)}
-          rows={3}
-          className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-        />
-      </div>
+          <div>
+            <label htmlFor="expectedBenefits" className="block text-sm font-medium text-gray-700 mb-1">
+              Expected Benefits
+            </label>
+            <textarea
+              id="expectedBenefits"
+              value={expectedBenefits}
+              onChange={(e) => setExpectedBenefits(e.target.value)}
+              rows={3}
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
 
-      <div>
-        <label htmlFor="actualBenefits" className="block text-sm font-medium text-gray-700 mb-1">
-          Actual Benefits
-        </label>
-        <textarea
-          id="actualBenefits"
-          value={actualBenefits}
-          onChange={(e) => setActualBenefits(e.target.value)}
-          rows={3}
-          className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-        />
-      </div>
+          <div>
+            <label htmlFor="actualBenefits" className="block text-sm font-medium text-gray-700 mb-1">
+              Actual Benefits
+            </label>
+            <textarea
+              id="actualBenefits"
+              value={actualBenefits}
+              onChange={(e) => setActualBenefits(e.target.value)}
+              rows={3}
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
 
-      <div>
-        <label htmlFor="lessonsLearned" className="block text-sm font-medium text-gray-700 mb-1">
-          Lessons Learned
-        </label>
-        <textarea
-          id="lessonsLearned"
-          value={lessonsLearned}
-          onChange={(e) => setLessonsLearned(e.target.value)}
-          rows={3}
-          className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-        />
-      </div>
+          <div>
+            <label htmlFor="lessonsLearned" className="block text-sm font-medium text-gray-700 mb-1">
+              Lessons Learned
+            </label>
+            <textarea
+              id="lessonsLearned"
+              value={lessonsLearned}
+              onChange={(e) => setLessonsLearned(e.target.value)}
+              rows={3}
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
 
-      <div>
-        <label htmlFor="tags" className="block text-sm font-medium text-gray-700 mb-1">
-          Tags
-        </label>
-        <input
-          id="tags"
-          type="text"
-          value={tagsText}
-          onChange={(e) => setTagsText(e.target.value)}
-          placeholder="Comma-separated tags"
-          className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-        />
-      </div>
+          <div>
+            <label htmlFor="tags" className="block text-sm font-medium text-gray-700 mb-1">
+              Tags
+            </label>
+            <input
+              id="tags"
+              type="text"
+              value={tagsText}
+              onChange={(e) => setTagsText(e.target.value)}
+              placeholder="Comma-separated tags"
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
 
-      <div>
-        <label htmlFor="dependencies" className="block text-sm font-medium text-gray-700 mb-1">
-          Dependencies
-        </label>
-        <input
-          id="dependencies"
-          type="text"
-          value={dependenciesText}
-          onChange={(e) => setDependenciesText(e.target.value)}
-          placeholder="Comma-separated ADR IDs"
-          className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-        />
-        <p className="text-xs text-gray-500 mt-1">
-          Use ADR IDs separated by commas. Existing dependency IDs will be preserved.
-        </p>
-      </div>
+          <div>
+            <label htmlFor="dependencies" className="block text-sm font-medium text-gray-700 mb-1">
+              Dependencies
+            </label>
+            <input
+              id="dependencies"
+              type="text"
+              value={dependenciesText}
+              onChange={(e) => setDependenciesText(e.target.value)}
+              placeholder="Comma-separated ADR IDs"
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Use ADR IDs separated by commas. Existing dependency IDs will be preserved.
+            </p>
+          </div>
+        </>
+      ) : (
+        <div className="rounded-md border border-yellow-200 bg-yellow-50 px-3 py-2 text-sm text-yellow-700">
+          You can only add or update alternative analysis for this ADR. Other fields are read-only.
+        </div>
+      )}
 
       <div className="space-y-2">
         <h3 className="font-semibold">Alternative Analysis</h3>

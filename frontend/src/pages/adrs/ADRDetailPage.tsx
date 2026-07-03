@@ -48,8 +48,7 @@ export default function ADRDetailPage() {
 
   if (loading || !adr) return <p>Loading...</p>;
 
-  const canChangeStatus =
-    user?.role === "admin" || user?.id === adr.authorId?._id;
+  const canChangeStatus = user?.role === "admin";
   const nextStatuses = STATUS_TRANSITIONS[adr.status] || [];
 
   const handleStatusChange = async (nextStatus: string) => {

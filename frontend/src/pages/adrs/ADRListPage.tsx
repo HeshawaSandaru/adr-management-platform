@@ -45,7 +45,6 @@ export default function ADRListPage() {
         page,
         limit,
         status: status || undefined,
-        authorId: !isAdmin ? user?.id : undefined,
         title: debouncedSearch || undefined,
       });
 
@@ -112,7 +111,7 @@ export default function ADRListPage() {
           <tr>
             <th>Title</th>
             <th>Status</th>
-            {isAdmin && <th>Author</th>}
+            <th>Author</th>
             <th>Actions</th>
           </tr>
         </thead>
@@ -120,13 +119,13 @@ export default function ADRListPage() {
         <tbody>
           {loading ? (
             <tr>
-              <td colSpan={isAdmin ? 4 : 3} className="text-center text-gray-500 py-6">
+              <td colSpan={4} className="text-center text-gray-500 py-6">
                 Loading ADRs...
               </td>
             </tr>
           ) : adrs.length === 0 ? (
             <tr>
-              <td colSpan={isAdmin ? 4 : 3} className="text-center text-gray-500 py-6">
+              <td colSpan={4} className="text-center text-gray-500 py-6">
                 No ADRs found
               </td>
             </tr>
@@ -135,9 +134,7 @@ export default function ADRListPage() {
               <tr key={adr._id} className="border-t">
                 <td>{adr.title}</td>
                 <td>{adr.status}</td>
-
-                {isAdmin && <td>{adr.authorId?.name}</td>}
-
+                <td>{adr.authorId?.name || adr.authorId || "Unknown"}</td>
                 <td className="space-x-2">
                   <button
                     onClick={() => navigate(`/adrs/${adr._id}`)}
