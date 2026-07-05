@@ -68,7 +68,7 @@ export default function ADREditPage() {
 
     try {
       const updatePayload: any = {
-        alternativeAnalysis: alternativeAnalysis.length ? alternativeAnalysis : undefined,
+        alternativeAnalysis,
       };
 
       if (isOwner || isAdmin) {

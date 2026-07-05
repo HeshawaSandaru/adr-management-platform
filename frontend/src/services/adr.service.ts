@@ -1,5 +1,7 @@
 import api from "../api/axios";
 
+
+
 export interface Adr {
   _id: string;
   title: string;
@@ -35,6 +37,8 @@ export interface Adr {
   updatedAt?: string;
 }
 
+
+
 export interface AdrQuery {
   page?: number;
   limit?: number;
@@ -44,12 +48,15 @@ export interface AdrQuery {
   tags?: string; // backend expects comma-separated string
 }
 
+
 export interface AdrListResponse {
   data: Adr[];
   total: number;
   page: number;
   limit: number;
 }
+
+
 
 export interface CreateAdrDto {
   title: string;
@@ -70,6 +77,8 @@ export interface CreateAdrDto {
 
   dependencies?: string[];
 }
+
+
 
 export interface UpdateAdrDto {
   title?: string;
@@ -92,6 +101,8 @@ export interface UpdateAdrDto {
 
   dependencies?: string[];
 }
+
+
 
 export const AdrService = {
   /* -------- LIST ADRs -------- */
@@ -125,13 +136,19 @@ export const AdrService = {
   },
 
   /* -------- STATUS UPDATE -------- */
-  updateStatus: async (id: string, status: string): Promise<Adr> => {
+  updateStatus: async (
+    id: string,
+    status: string
+  ): Promise<Adr> => {
     const res = await api.patch(`/adrs/${id}/status`, { status });
     return res.data;
   },
 
   /* -------- ADD DEPENDENCY -------- */
-  addDependency: async (id: string, dependencyId: string): Promise<Adr> => {
+  addDependency: async (
+    id: string,
+    dependencyId: string
+  ): Promise<Adr> => {
     const res = await api.patch(`/adrs/${id}/dependencies`, {
       dependencyId,
     });
@@ -139,8 +156,13 @@ export const AdrService = {
   },
 
   /* -------- REMOVE DEPENDENCY -------- */
-  removeDependency: async (id: string, dependencyId: string): Promise<Adr> => {
-    const res = await api.delete(`/adrs/${id}/dependencies/${dependencyId}`);
+  removeDependency: async (
+    id: string,
+    dependencyId: string
+  ): Promise<Adr> => {
+    const res = await api.delete(
+      `/adrs/${id}/dependencies/${dependencyId}`
+    );
     return res.data;
   },
 

@@ -10,14 +10,6 @@ import ADRCreatePage from "../pages/adrs/ADRCreatePage";
 import ADRDetailPage from "../pages/adrs/ADRDetailPage";
 import ADREditPage from "../pages/adrs/ADREditPage";
 
-function ADRs() {
-  return <h2>ADR List</h2>;
-}
-
-function CreateADR() {
-  return <h2>Create ADR</h2>;
-}
-
 function NotFound() {
   return <h2>404 - Page Not Found</h2>;
 }
