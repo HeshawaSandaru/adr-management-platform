@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document , Types } from 'mongoose';
+import { Document ,Schema as MongooseSchema, Types } from 'mongoose';
 
 import { AdrStatus } from '../../common/enums/adr-status.enum';
 import { User } from '../../users/schemas/user.schema';
@@ -56,12 +56,7 @@ export class Adr {
   @Prop()
   lessonsLearned!: string;
 
-  @Prop([
-    {
-      type: Types.ObjectId,
-      ref: "Adr",
-    },
-  ])
+  @Prop({ type: [{ type: MongooseSchema.Types.ObjectId, ref: 'Adr' }], default: [] })
   dependencies!: Types.ObjectId[];
 }
 

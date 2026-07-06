@@ -9,6 +9,7 @@ import ADRListPage from "../pages/adrs/ADRListPage";
 import ADRCreatePage from "../pages/adrs/ADRCreatePage";
 import ADRDetailPage from "../pages/adrs/ADRDetailPage";
 import ADREditPage from "../pages/adrs/ADREditPage";
+import DependencyGraphPage from "../pages/DependencyGraphPage";
 
 function NotFound() {
   return <h2>404 - Page Not Found</h2>;
@@ -48,6 +49,17 @@ export default function AppRoutes() {
           <ProtectedRoute>
             <AppLayout>
               <ADRCreatePage />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/adrs/graph"
+        element={
+          <ProtectedRoute>
+            <AppLayout>
+              <DependencyGraphPage />
             </AppLayout>
           </ProtectedRoute>
         }

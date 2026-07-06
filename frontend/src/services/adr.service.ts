@@ -1,7 +1,5 @@
 import api from "../api/axios";
 
-
-
 export interface Adr {
   _id: string;
   title: string;
@@ -37,7 +35,19 @@ export interface Adr {
   updatedAt?: string;
 }
 
+export type ReviewDecision = "approved" | "rejected" | "changes_requested";
 
+export interface Review {
+  _id: string;
+  reviewerId: {
+    _id: string;
+    name: string;
+    email: string;
+  };
+  decision: ReviewDecision;
+  comment: string;
+  createdAt: string;
+}
 
 export interface AdrQuery {
   page?: number;
@@ -48,15 +58,12 @@ export interface AdrQuery {
   tags?: string; // backend expects comma-separated string
 }
 
-
 export interface AdrListResponse {
   data: Adr[];
   total: number;
   page: number;
   limit: number;
 }
-
-
 
 export interface CreateAdrDto {
   title: string;
@@ -77,8 +84,6 @@ export interface CreateAdrDto {
 
   dependencies?: string[];
 }
-
-
 
 export interface UpdateAdrDto {
   title?: string;
@@ -102,7 +107,23 @@ export interface UpdateAdrDto {
   dependencies?: string[];
 }
 
+export interface GraphNode {
+  tags: never[];
+  id: string;
+  title: string;
+  status: string;
+  authorId?: string;
+}
 
+export interface GraphEdge {
+  from: string; // depends on `to`
+  to: string;
+}
+
+export interface AdrGraph {
+  nodes: GraphNode[];
+  edges: GraphEdge[];
+}
 
 export const AdrService = {
   /* -------- LIST ADRs -------- */
@@ -136,19 +157,13 @@ export const AdrService = {
   },
 
   /* -------- STATUS UPDATE -------- */
-  updateStatus: async (
-    id: string,
-    status: string
-  ): Promise<Adr> => {
+  updateStatus: async (id: string, status: string): Promise<Adr> => {
     const res = await api.patch(`/adrs/${id}/status`, { status });
     return res.data;
   },
 
   /* -------- ADD DEPENDENCY -------- */
-  addDependency: async (
-    id: string,
-    dependencyId: string
-  ): Promise<Adr> => {
+  addDependency: async (id: string, dependencyId: string): Promise<Adr> => {
     const res = await api.patch(`/adrs/${id}/dependencies`, {
       dependencyId,
     });
@@ -156,19 +171,35 @@ export const AdrService = {
   },
 
   /* -------- REMOVE DEPENDENCY -------- */
-  removeDependency: async (
-    id: string,
-    dependencyId: string
-  ): Promise<Adr> => {
-    const res = await api.delete(
-      `/adrs/${id}/dependencies/${dependencyId}`
-    );
+  removeDependency: async (id: string, dependencyId: string): Promise<Adr> => {
+    const res = await api.delete(`/adrs/${id}/dependencies/${dependencyId}`);
     return res.data;
   },
 
   /* -------- GET DEPENDENCIES -------- */
   getDependencies: async (id: string) => {
     const res = await api.get(`/adrs/${id}/dependencies`);
+    return res.data;
+  },
+
+  /* -------- GET REVIEWS -------- */
+  getReviews: async (id: string): Promise<Review[]> => {
+    const res = await api.get(`/adrs/${id}/reviews`);
+    return res.data;
+  },
+
+  /* -------- CREATE REVIEW -------- */
+  createReview: async (
+    id: string,
+    data: { decision: ReviewDecision; comment: string },
+  ): Promise<Review> => {
+    const res = await api.post(`/adrs/${id}/reviews`, data);
+    return res.data;
+  },
+
+  /* -------- DEPENDENCY GRAPH -------- */
+  getGraph: async (): Promise<AdrGraph> => {
+    const res = await api.get("/adrs/graph");
     return res.data;
   },
 };

@@ -40,6 +40,12 @@ export class AdrsController {
     return this.adrsService.findAll(query);
   }
 
+  @Get("graph")
+  @UseGuards(JwtAuthGuard)
+  getGraph() {
+    return this.adrsService.getGraph();
+  }
+
   @Get(":id")
   @UseGuards(JwtAuthGuard)
   findOne(@Param("id") id: string) {
