@@ -24,6 +24,10 @@ export class AdrQueryDto {
   tags?: string;
 
   @IsOptional()
+  @IsString()
+  title?: string;
+
+  @IsOptional()
   @Type(() => Number) // transforms query string "1" → number 1
   @IsInt()
   @Min(1)

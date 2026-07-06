@@ -54,6 +54,11 @@ export class AdrsService {
       };
     }
 
+    if (query.title) {
+      const escaped = query.title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      filter.title = { $regex: escaped, $options: "i" };
+    }
+
     const page = Math.max(1, query.page ?? 1);
     const limit = Math.min(100, query.limit ?? 20); // cap at 100
     const skip = (page - 1) * limit;
@@ -76,7 +81,11 @@ export class AdrsService {
       throw new BadRequestException("Invalid ADR ID");
     }
 
-    const adr = await this.adrModel.findById(id).exec();
+    const adr = await this.adrModel
+      .findById(id)
+      .populate("authorId", "name email")
+      .populate("dependencies", "title status")
+      .exec();
 
     if (!adr) {
       throw new NotFoundException("ADR not found");
@@ -92,11 +101,58 @@ export class AdrsService {
 
     const isAdmin = user.role === Role.ADMIN;
 
-    const filter = isAdmin ? { _id: id } : { _id: id, authorId: user.userId };
+    if (isAdmin) {
+      const updated = await this.adrModel.findOneAndUpdate(
+        { _id: id },
+        { $set: dto },
+        {
+          new: true,
+          runValidators: true,
+        },
+      );
 
-    const updated = await this.adrModel.findOneAndUpdate(
-      filter,
-      { $set: dto },
+      if (!updated) {
+        throw new ForbiddenException("Not allowed or ADR not found");
+      }
+
+      return updated;
+    }
+
+    const existing = await this.adrModel.findById(id).select("authorId alternativeAnalysis").exec();
+    if (!existing) {
+      throw new ForbiddenException("Not allowed or ADR not found");
+    }
+
+    const isOwner = existing.authorId.toString() === user.userId;
+
+    if (isOwner) {
+      const updated = await this.adrModel.findOneAndUpdate(
+        { _id: id, authorId: user.userId },
+        { $set: dto },
+        {
+          new: true,
+          runValidators: true,
+        },
+      );
+
+      if (!updated) {
+        throw new ForbiddenException("Not allowed or ADR not found");
+      }
+
+      return updated;
+    }
+
+    const allowedKeys = ["alternativeAnalysis"];
+    const extraKeys = Object.keys(dto).filter((key) => !allowedKeys.includes(key));
+    if (extraKeys.length > 0) {
+      throw new ForbiddenException(
+        "You are only allowed to update alternative analysis on ADRs you do not own",
+      );
+    }
+
+    const updated = await this.adrModel.findByIdAndUpdate(
+      id,
+      { $set: { alternativeAnalysis: dto.alternativeAnalysis } },
       {
         new: true,
         runValidators: true,
@@ -167,14 +223,12 @@ export class AdrsService {
       throw new BadRequestException("Invalid ADR ID");
     }
 
-    const isAdmin = user.role === Role.ADMIN;
-    const ownerFilter = isAdmin
-      ? { _id: id }
-      : { _id: id, authorId: user.userId };
+    if (user.role !== Role.ADMIN) {
+      throw new ForbiddenException("Only admins can change ADR status");
+    }
 
-    // Read current state (for validation only)
     const current = await this.adrModel
-      .findOne(ownerFilter)
+      .findById(id)
       .select("status")
       .exec();
 
@@ -188,7 +242,7 @@ export class AdrsService {
     // Atomic update with optimistic concurrency guard
     const updated = await this.adrModel.findOneAndUpdate(
       {
-        ...ownerFilter,
+        _id: id,
         status: current.status, // ensures no concurrent modification happened
       },
       {

@@ -5,13 +5,10 @@ import DashboardPage from "../pages/DashboardPage";
 import ProtectedRoute from "../auth/ProtectedRoute";
 import AppLayout from "../layouts/AppLayout";
 
-function ADRs() {
-  return <h2>ADR List</h2>;
-}
-
-function CreateADR() {
-  return <h2>Create ADR</h2>;
-}
+import ADRListPage from "../pages/adrs/ADRListPage";
+import ADRCreatePage from "../pages/adrs/ADRCreatePage";
+import ADRDetailPage from "../pages/adrs/ADRDetailPage";
+import ADREditPage from "../pages/adrs/ADREditPage";
 
 function NotFound() {
   return <h2>404 - Page Not Found</h2>;
@@ -39,7 +36,7 @@ export default function AppRoutes() {
         element={
           <ProtectedRoute>
             <AppLayout>
-              <ADRs />
+              <ADRListPage />
             </AppLayout>
           </ProtectedRoute>
         }
@@ -50,7 +47,29 @@ export default function AppRoutes() {
         element={
           <ProtectedRoute>
             <AppLayout>
-              <CreateADR />
+              <ADRCreatePage />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/adrs/:id"
+        element={
+          <ProtectedRoute>
+            <AppLayout>
+              <ADRDetailPage />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/adrs/:id/edit"
+        element={
+          <ProtectedRoute>
+            <AppLayout>
+              <ADREditPage />
             </AppLayout>
           </ProtectedRoute>
         }
