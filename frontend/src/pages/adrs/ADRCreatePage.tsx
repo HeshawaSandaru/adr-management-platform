@@ -90,11 +90,9 @@ export default function ADRCreatePage() {
           ? alternativeAnalysis
           : undefined,
       });
-      await Promise.all(
-        selectedDependencies.map((dependency) =>
-          AdrService.addDependency(createdAdr._id, dependency._id),
-        ),
-      );
+      for (const dependency of selectedDependencies) {
+        await AdrService.addDependency(createdAdr._id, dependency._id);
+      }
       navigate("/adrs");
     } catch (err: any) {
       setError(err?.response?.data?.message || "Failed to create ADR");
