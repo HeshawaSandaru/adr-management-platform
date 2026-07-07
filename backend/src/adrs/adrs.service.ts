@@ -27,8 +27,11 @@ export class AdrsService {
 
   // ✅ CREATE ADR (WITH JWT USER)
   async create(dto: CreateAdrDto, user: RequestWithUser["user"]) {
+    const processedDependencies =
+      dto.dependencies?.map((depId) => new Types.ObjectId(depId)) || [];
     return this.adrModel.create({
       ...dto,
+      dependencies: processedDependencies,
       authorId: user.userId,
       status: AdrStatus.Draft,
     });
@@ -76,6 +79,34 @@ export class AdrsService {
     return { data, total, page, limit };
   }
 
+  async getGraph() {
+    const adrs = await this.adrModel
+      .find()
+      .select("title status dependencies authorId")
+      .lean()
+      .exec();
+
+    const nodes = adrs.map((a) => ({
+      id: a._id.toString(),
+      title: a.title,
+      status: a.status,
+      authorId: a.authorId?.toString(),
+    }));
+
+    const edges: { from: string; to: string }[] = [];
+
+    for (const adr of adrs) {
+      for (const depId of adr.dependencies || []) {
+        edges.push({
+          from: adr._id.toString(),
+          to: depId.toString(),
+        });
+      }
+    }
+
+    return { nodes, edges };
+  }
+
   async findOne(id: string) {
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException("Invalid ADR ID");
@@ -118,7 +149,10 @@ export class AdrsService {
       return updated;
     }
 
-    const existing = await this.adrModel.findById(id).select("authorId alternativeAnalysis").exec();
+    const existing = await this.adrModel
+      .findById(id)
+      .select("authorId alternativeAnalysis")
+      .exec();
     if (!existing) {
       throw new ForbiddenException("Not allowed or ADR not found");
     }
@@ -143,7 +177,9 @@ export class AdrsService {
     }
 
     const allowedKeys = ["alternativeAnalysis"];
-    const extraKeys = Object.keys(dto).filter((key) => !allowedKeys.includes(key));
+    const extraKeys = Object.keys(dto).filter(
+      (key) => !allowedKeys.includes(key),
+    );
     if (extraKeys.length > 0) {
       throw new ForbiddenException(
         "You are only allowed to update alternative analysis on ADRs you do not own",
@@ -227,10 +263,7 @@ export class AdrsService {
       throw new ForbiddenException("Only admins can change ADR status");
     }
 
-    const current = await this.adrModel
-      .findById(id)
-      .select("status")
-      .exec();
+    const current = await this.adrModel.findById(id).select("status").exec();
 
     if (!current) {
       throw new ForbiddenException("Not allowed or ADR not found");
@@ -264,74 +297,152 @@ export class AdrsService {
   }
 
   //dependencies
-
-  async addDependency(
+  // ✅ Checks whether adding `dependencyId` as a dependency of `id` would
+  // create a cycle, by walking the dependency chain starting from
+  // `dependencyId` and seeing if we ever reach `id`.
+  // ==========================================
+  // SAFE CYCLE CHECKER (Defensive Programming)
+  // ==========================================
+  private async wouldCreateCycle(
     id: string,
     dependencyId: string,
+  ): Promise<boolean> {
+    const visited = new Set<string>();
+
+    const queue: string[] = [dependencyId.toString()];
+    const matchIdStr = id.toString();
+
+    while (queue.length > 0) {
+      const current = queue.shift()!;
+
+      if (current === matchIdStr) {
+        return true;
+      }
+
+      if (visited.has(current)) {
+        continue;
+      }
+      visited.add(current);
+
+      const doc = await this.adrModel
+        .findById(current)
+        .select("dependencies")
+        .exec();
+
+      if (!doc || !doc.dependencies) {
+        continue;
+      }
+
+      for (const dep of doc.dependencies) {
+        if (dep) {
+          queue.push(dep.toString());
+        }
+      }
+    }
+
+    return false;
+  }
+
+  // ==========================================================
+  // ADD DEPENDENCY (Using Safe .save() Method)
+  // ==========================================================
+  async addDependency(
+    id: string,
+    dependencyId: string | undefined,
     user: RequestWithUser["user"],
   ) {
+    if (!dependencyId) {
+      throw new BadRequestException(
+        'The "dependencyId" property is required in the request body.',
+      );
+    }
+
     if (!Types.ObjectId.isValid(id) || !Types.ObjectId.isValid(dependencyId)) {
-      throw new BadRequestException("Invalid ADR ID");
+      throw new BadRequestException("Invalid ID format provided");
     }
 
     if (id === dependencyId) {
-      throw new BadRequestException("ADR cannot depend on itself");
+      throw new BadRequestException("An ADR cannot depend on itself");
     }
 
-    const dependency = await this.adrModel.findById(dependencyId);
-
-    if (!dependency) {
-      throw new NotFoundException("Dependency not found");
+    // 1. Fetch target ADR document fully
+    const targetAdr = await this.adrModel.findById(id).exec();
+    if (!targetAdr) {
+      throw new NotFoundException("Target ADR not found");
     }
 
-    const isAdmin = user.role === Role.ADMIN;
+    // 2. Validate target dependency exists in the DB
+    const dependencyExists = await this.adrModel.exists({
+      _id: new Types.ObjectId(dependencyId),
+    });
+    if (!dependencyExists) {
+      throw new NotFoundException("Dependency ADR not found");
+    }
 
-    const updated = await this.adrModel.findOneAndUpdate(
-      {
-        _id: id,
-        ...(isAdmin ? {} : { authorId: user.userId }),
-      },
-      {
-        $addToSet: { dependencies: new Types.ObjectId(dependencyId) },
-      },
-      {
-        new: true,
-      },
+    // 3. Authorization validation
+    const isAdmin = user?.role === Role.ADMIN;
+    if (!isAdmin && targetAdr.authorId.toString() !== user?.userId) {
+      throw new ForbiddenException(
+        "You can only manage dependencies for your own ADRs",
+      );
+    }
+
+    // 4. Double check duplicate entries to simulate $addToSet safely
+    const alreadyExists = targetAdr.dependencies.some(
+      (depId) => depId.toString() === dependencyId.toString(),
     );
-    if (!updated) {
-      throw new ForbiddenException("Not allowed or ADR not found");
+    if (alreadyExists) {
+      return targetAdr; // Return gracefully if relationship is already mapped
     }
 
-    return updated;
+    // 5. Cycle validation check
+    const introducesCycle = await this.wouldCreateCycle(id, dependencyId);
+    if (introducesCycle) {
+      throw new BadRequestException(
+        "Circular reference detected! This dependency loop is not allowed.",
+      );
+    }
+
+    // 6. Push and explicitly save using Mongoose tracking hooks
+    targetAdr.dependencies.push(new Types.ObjectId(dependencyId));
+    return await targetAdr.save();
   }
 
+  // ==========================================================
+  // REMOVE DEPENDENCY (Using Safe Filter + .save())
+  // ==========================================================
   async removeDependency(
     id: string,
     dependencyId: string,
     user: RequestWithUser["user"],
   ) {
     if (!Types.ObjectId.isValid(id) || !Types.ObjectId.isValid(dependencyId)) {
-      throw new BadRequestException("Invalid ADR ID");
+      throw new BadRequestException("Invalid ID format provided");
     }
 
-    const isAdmin = user.role === Role.ADMIN;
+    const targetAdr = await this.adrModel.findById(id).exec();
+    if (!targetAdr) {
+      throw new NotFoundException("Target ADR not found");
+    }
 
-    const updated = await this.adrModel.findOneAndUpdate(
-      {
-        _id: id,
-        ...(isAdmin ? {} : { authorId: user.userId }),
-      },
-      {
-        $pull: { dependencies: new Types.ObjectId(dependencyId) },
-      },
-      { new: true },
+    const isAdmin = user?.role === Role.ADMIN;
+    if (!isAdmin && targetAdr.authorId.toString() !== user?.userId) {
+      throw new ForbiddenException(
+        "You can only manage dependencies for your own ADRs",
+      );
+    }
+
+    // Filter out the requested dependency from the current instances array
+    targetAdr.dependencies = targetAdr.dependencies.filter(
+      (depId) => depId.toString() !== dependencyId.toString(),
     );
-    if (!updated) {
-      throw new ForbiddenException("Not allowed or ADR not found");
-    }
 
-    return updated;
+    return await targetAdr.save();
   }
+
+  // ==========================================================
+  // REMOVE DEPENDENCY
+  // ==========================================================
 
   async getDependencies(id: string) {
     if (!Types.ObjectId.isValid(id)) {

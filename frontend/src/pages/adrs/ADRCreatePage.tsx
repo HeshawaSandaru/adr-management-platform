@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { AdrService } from "../../services/adr.service";
+import { AdrService, Adr } from "../../services/adr.service";
 import TextInput from "../../components/TextInput";
 
 export default function ADRCreatePage() {
@@ -11,23 +11,71 @@ export default function ADRCreatePage() {
   const [actualBenefits, setActualBenefits] = useState("");
   const [lessonsLearned, setLessonsLearned] = useState("");
   const [tagsText, setTagsText] = useState("");
-  const [dependenciesText, setDependenciesText] = useState("");
-  const [alternativeAnalysis, setAlternativeAnalysis] = useState<{
-    alternative: string;
-    pros: string[];
-    cons: string[];
-  }[]>([]);
+  const [selectedDependencies, setSelectedDependencies] = useState<Adr[]>([]);
+  const [dependencyInput, setDependencyInput] = useState("");
+  const [dependencyOptions, setDependencyOptions] = useState<Adr[]>([]);
+  const [showDependencyOptions, setShowDependencyOptions] = useState(false);
+  const [alternativeAnalysis, setAlternativeAnalysis] = useState<
+    {
+      alternative: string;
+      pros: string[];
+      cons: string[];
+    }[]
+  >([]);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const query = dependencyInput.trim();
+
+    if (!query) {
+      setDependencyOptions([]);
+      return;
+    }
+
+    const loadOptions = async () => {
+      try {
+        const res = await AdrService.getAll({
+          page: 1,
+          limit: 10,
+          title: query,
+        });
+        setDependencyOptions(
+          res.data.filter(
+            (item) => !selectedDependencies.some((dep) => dep._id === item._id),
+          ),
+        );
+      } catch {
+        setDependencyOptions([]);
+      }
+    };
+
+    const timer = window.setTimeout(loadOptions, 250);
+    return () => window.clearTimeout(timer);
+  }, [dependencyInput, selectedDependencies]);
+
+  const handleSelectDependency = (adr: Adr) => {
+    if (selectedDependencies.some((dep) => dep._id === adr._id)) return;
+
+    setSelectedDependencies((current) => [...current, adr]);
+    setDependencyInput("");
+    setShowDependencyOptions(false);
+  };
+
+  const removeDependency = (id: string) => {
+    setSelectedDependencies((current) =>
+      current.filter((item) => item._id !== id),
+    );
+  };
 
   const handleSubmit = async () => {
     setError("");
     setSubmitting(true);
 
     try {
-      await AdrService.create({
+      const createdAdr = await AdrService.create({
         title,
         problemStatement,
         proposedSolution,
@@ -38,13 +86,13 @@ export default function ADRCreatePage() {
           .split(",")
           .map((tag) => tag.trim())
           .filter(Boolean),
-        dependencies: dependenciesText
-          .split(",")
-          .map((id) => id.trim())
-          .filter(Boolean),
-        alternativeAnalysis: alternativeAnalysis.length ? alternativeAnalysis : undefined,
+        alternativeAnalysis: alternativeAnalysis.length
+          ? alternativeAnalysis
+          : undefined,
       });
-
+      for (const dependency of selectedDependencies) {
+        await AdrService.addDependency(createdAdr._id, dependency._id);
+      }
       navigate("/adrs");
     } catch (err: any) {
       setError(err?.response?.data?.message || "Failed to create ADR");
@@ -63,12 +111,30 @@ export default function ADRCreatePage() {
         </div>
       )}
 
-      <TextInput id="title" label="Title" value={title} onChange={(e) => setTitle(e.target.value)} />
-      <TextInput id="problem" label="Problem Statement" value={problemStatement} onChange={(e) => setProblemStatement(e.target.value)} />
-      <TextInput id="solution" label="Proposed Solution" value={proposedSolution} onChange={(e) => setProposedSolution(e.target.value)} />
+      <TextInput
+        id="title"
+        label="Title"
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+      />
+      <TextInput
+        id="problem"
+        label="Problem Statement"
+        value={problemStatement}
+        onChange={(e) => setProblemStatement(e.target.value)}
+      />
+      <TextInput
+        id="solution"
+        label="Proposed Solution"
+        value={proposedSolution}
+        onChange={(e) => setProposedSolution(e.target.value)}
+      />
 
       <div>
-        <label htmlFor="expectedBenefits" className="block text-sm font-medium text-gray-700 mb-1">
+        <label
+          htmlFor="expectedBenefits"
+          className="block text-sm font-medium text-gray-700 mb-1"
+        >
           Expected Benefits
         </label>
         <textarea
@@ -81,7 +147,10 @@ export default function ADRCreatePage() {
       </div>
 
       <div>
-        <label htmlFor="actualBenefits" className="block text-sm font-medium text-gray-700 mb-1">
+        <label
+          htmlFor="actualBenefits"
+          className="block text-sm font-medium text-gray-700 mb-1"
+        >
           Actual Benefits
         </label>
         <textarea
@@ -94,7 +163,10 @@ export default function ADRCreatePage() {
       </div>
 
       <div>
-        <label htmlFor="lessonsLearned" className="block text-sm font-medium text-gray-700 mb-1">
+        <label
+          htmlFor="lessonsLearned"
+          className="block text-sm font-medium text-gray-700 mb-1"
+        >
           Lessons Learned
         </label>
         <textarea
@@ -107,7 +179,10 @@ export default function ADRCreatePage() {
       </div>
 
       <div>
-        <label htmlFor="tags" className="block text-sm font-medium text-gray-700 mb-1">
+        <label
+          htmlFor="tags"
+          className="block text-sm font-medium text-gray-700 mb-1"
+        >
           Tags
         </label>
         <input
@@ -121,19 +196,85 @@ export default function ADRCreatePage() {
       </div>
 
       <div>
-        <label htmlFor="dependencies" className="block text-sm font-medium text-gray-700 mb-1">
+        <label
+          htmlFor="dependencies"
+          className="block text-sm font-medium text-gray-700 mb-1"
+        >
           Dependencies
         </label>
-        <input
-          id="dependencies"
-          type="text"
-          value={dependenciesText}
-          onChange={(e) => setDependenciesText(e.target.value)}
-          placeholder="Comma-separated ADR IDs"
-          className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-        />
-        <p className="text-xs text-gray-500 mt-1">
-          Use ADR IDs separated by commas. Dependencies will be attached after create.
+
+        <div className="relative">
+          <div className="flex items-center gap-2">
+            <input
+              id="dependencies"
+              type="text"
+              value={dependencyInput}
+              onChange={(e) => {
+                setDependencyInput(e.target.value);
+                setShowDependencyOptions(true);
+              }}
+              onFocus={() => setShowDependencyOptions(true)}
+              placeholder="Type to search ADR titles"
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+            <button
+              type="button"
+              onClick={() => setShowDependencyOptions((value) => !value)}
+              className="rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50"
+            >
+              ▼
+            </button>
+          </div>
+
+          {showDependencyOptions && dependencyInput.trim() && (
+            <div className="absolute z-10 mt-1 w-full rounded-md border border-gray-200 bg-white shadow-lg">
+              {dependencyOptions.length > 0 ? (
+                dependencyOptions.map((option) => (
+                  <button
+                    key={option._id}
+                    type="button"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => handleSelectDependency(option)}
+                    className="block w-full px-3 py-2 text-left text-sm hover:bg-gray-100"
+                  >
+                    <div className="font-medium">{option.title}</div>
+                    <div className="text-xs text-gray-500">
+                      Status: {option.status}
+                    </div>
+                  </button>
+                ))
+              ) : (
+                <div className="px-3 py-2 text-sm text-gray-500">
+                  {dependencyInput.trim()
+                    ? "No matching ADRs found"
+                    : "Start typing to see ADRs"}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        <div className="mt-2 flex flex-wrap gap-2">
+          {selectedDependencies.map((dependency) => (
+            <span
+              key={dependency._id}
+              className="inline-flex items-center rounded-full bg-blue-50 px-2.5 py-1 text-sm text-blue-700"
+            >
+              {dependency.title}
+              <button
+                type="button"
+                onClick={() => removeDependency(dependency._id)}
+                className="ml-2 text-blue-900 hover:text-blue-600"
+              >
+                ×
+              </button>
+            </span>
+          ))}
+        </div>
+
+        <p className="mt-1 text-xs text-gray-500">
+          Select existing ADRs from the dropdown. Dependencies will be attached
+          after create.
         </p>
       </div>
 
@@ -246,7 +387,12 @@ export default function ADRCreatePage() {
         ))}
 
         <button
-          onClick={() => setAlternativeAnalysis([...alternativeAnalysis, { alternative: "", pros: [], cons: [] }])}
+          onClick={() =>
+            setAlternativeAnalysis([
+              ...alternativeAnalysis,
+              { alternative: "", pros: [], cons: [] },
+            ])
+          }
           className="px-3 py-1 bg-gray-100 rounded text-sm"
         >
           + Add Alternative

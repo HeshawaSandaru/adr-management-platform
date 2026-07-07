@@ -7,6 +7,7 @@ const NAV_ITEMS = [
   { label: "Dashboard", path: "/", icon: "dashboard" },
   { label: "ADRs", path: "/adrs", icon: "list_alt" },
   { label: "Create ADR", path: "/adrs/create", icon: "add_circle" },
+  { label: "Dependency Graph", path: "/adrs/graph", icon: "account_tree" },
 ];
 
 export default function Sidebar() {
