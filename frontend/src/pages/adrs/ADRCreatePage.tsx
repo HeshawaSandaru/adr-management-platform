@@ -75,7 +75,7 @@ export default function ADRCreatePage() {
     setSubmitting(true);
 
     try {
-      await AdrService.create({
+      const createdAdr = await AdrService.create({
         title,
         problemStatement,
         proposedSolution,
@@ -86,12 +86,15 @@ export default function ADRCreatePage() {
           .split(",")
           .map((tag) => tag.trim())
           .filter(Boolean),
-        dependencies: selectedDependencies.map((dep) => dep._id),
         alternativeAnalysis: alternativeAnalysis.length
           ? alternativeAnalysis
           : undefined,
       });
-
+      await Promise.all(
+        selectedDependencies.map((dependency) =>
+          AdrService.addDependency(createdAdr._id, dependency._id),
+        ),
+      );
       navigate("/adrs");
     } catch (err: any) {
       setError(err?.response?.data?.message || "Failed to create ADR");

@@ -135,9 +135,30 @@ export default function ADREditPage() {
           .split(",")
           .map((tag) => tag.trim())
           .filter(Boolean);
-        updatePayload.dependencies = selectedDependencies.map((dep) => dep._id);
       }
+
+      const currentAdr = await AdrService.getById(id);
+
       await AdrService.update(id, updatePayload);
+
+      const currentDependencyIds =
+        currentAdr.dependencies?.map((dep) => dep._id) ?? [];
+
+      const newDependencyIds = selectedDependencies.map((dep) => dep._id);
+
+      // Add new dependencies
+      for (const dependencyId of newDependencyIds) {
+        if (!currentDependencyIds.includes(dependencyId)) {
+          await AdrService.addDependency(id, dependencyId);
+        }
+      }
+
+      // Remove removed dependencies
+      for (const dependencyId of currentDependencyIds) {
+        if (!newDependencyIds.includes(dependencyId)) {
+          await AdrService.removeDependency(id, dependencyId);
+        }
+      }
 
       navigate(`/adrs/${id}`);
     } catch (err: any) {

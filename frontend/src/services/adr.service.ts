@@ -108,7 +108,6 @@ export interface UpdateAdrDto {
 }
 
 export interface GraphNode {
-  tags: never[];
   id: string;
   title: string;
   status: string;
