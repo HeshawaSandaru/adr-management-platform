@@ -33,6 +33,14 @@ export default function ADREditPage() {
   const [isOwner, setIsOwner] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
 
+  // Shared input styling — matches ADRListPage / ADRDetailPage conventions.
+  const inputClasses =
+    "w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-700 " +
+    "placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 " +
+    "focus:border-transparent transition-colors";
+
+  const labelClasses = "block text-sm font-medium text-gray-700 mb-1";
+
   useEffect(() => {
     const query = dependencyInput.trim();
 
@@ -168,11 +176,17 @@ export default function ADREditPage() {
     }
   };
 
-  if (loading) return <p>Loading...</p>;
+  if (loading) {
+    return (
+      <div className="max-w-3xl mx-auto px-4 py-6">
+        <p className="text-sm text-gray-500">Loading...</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-4">
-      <h2 className="text-xl font-bold">Edit ADR</h2>
+    <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
+      <h2 className="text-2xl font-semibold text-gray-900">Edit ADR</h2>
 
       {error && (
         <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
@@ -181,7 +195,7 @@ export default function ADREditPage() {
       )}
 
       {isOwner || isAdmin ? (
-        <>
+        <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-5 space-y-4">
           <TextInput
             id="title"
             label="Title"
@@ -202,10 +216,7 @@ export default function ADREditPage() {
           />
 
           <div>
-            <label
-              htmlFor="expectedBenefits"
-              className="block text-sm font-medium text-gray-700 mb-1"
-            >
+            <label htmlFor="expectedBenefits" className={labelClasses}>
               Expected Benefits
             </label>
             <textarea
@@ -213,15 +224,12 @@ export default function ADREditPage() {
               value={expectedBenefits}
               onChange={(e) => setExpectedBenefits(e.target.value)}
               rows={3}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className={inputClasses}
             />
           </div>
 
           <div>
-            <label
-              htmlFor="actualBenefits"
-              className="block text-sm font-medium text-gray-700 mb-1"
-            >
+            <label htmlFor="actualBenefits" className={labelClasses}>
               Actual Benefits
             </label>
             <textarea
@@ -229,15 +237,12 @@ export default function ADREditPage() {
               value={actualBenefits}
               onChange={(e) => setActualBenefits(e.target.value)}
               rows={3}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className={inputClasses}
             />
           </div>
 
           <div>
-            <label
-              htmlFor="lessonsLearned"
-              className="block text-sm font-medium text-gray-700 mb-1"
-            >
+            <label htmlFor="lessonsLearned" className={labelClasses}>
               Lessons Learned
             </label>
             <textarea
@@ -245,15 +250,12 @@ export default function ADREditPage() {
               value={lessonsLearned}
               onChange={(e) => setLessonsLearned(e.target.value)}
               rows={3}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className={inputClasses}
             />
           </div>
 
           <div>
-            <label
-              htmlFor="tags"
-              className="block text-sm font-medium text-gray-700 mb-1"
-            >
+            <label htmlFor="tags" className={labelClasses}>
               Tags
             </label>
             <input
@@ -262,15 +264,12 @@ export default function ADREditPage() {
               value={tagsText}
               onChange={(e) => setTagsText(e.target.value)}
               placeholder="Comma-separated tags"
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className={inputClasses}
             />
           </div>
 
           <div>
-            <label
-              htmlFor="dependencies"
-              className="block text-sm font-medium text-gray-700 mb-1"
-            >
+            <label htmlFor="dependencies" className={labelClasses}>
               Dependencies
             </label>
 
@@ -286,12 +285,13 @@ export default function ADREditPage() {
                   }}
                   onFocus={() => setShowDependencyOptions(true)}
                   placeholder="Type to search ADR titles"
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className={inputClasses}
                 />
                 <button
                   type="button"
                   onClick={() => setShowDependencyOptions((value) => !value)}
-                  className="rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50"
+                  className="rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-600
+                             hover:bg-gray-50 transition-colors"
                 >
                   ▼
                 </button>
@@ -306,9 +306,9 @@ export default function ADREditPage() {
                         type="button"
                         onMouseDown={(e) => e.preventDefault()}
                         onClick={() => handleSelectDependency(option)}
-                        className="block w-full px-3 py-2 text-left text-sm hover:bg-gray-100"
+                        className="block w-full px-3 py-2 text-left text-sm hover:bg-gray-100 transition-colors"
                       >
-                        <div className="font-medium">{option.title}</div>
+                        <div className="font-medium text-gray-900">{option.title}</div>
                         <div className="text-xs text-gray-500">
                           Status: {option.status}
                         </div>
@@ -329,13 +329,13 @@ export default function ADREditPage() {
               {selectedDependencies.map((dependency) => (
                 <span
                   key={dependency._id}
-                  className="inline-flex items-center rounded-full bg-blue-50 px-2.5 py-1 text-sm text-blue-700"
+                  className="inline-flex items-center rounded-full bg-blue-50 px-2.5 py-1 text-sm font-medium text-blue-700"
                 >
                   {dependency.title}
                   <button
                     type="button"
                     onClick={() => removeDependency(dependency._id)}
-                    className="ml-2 text-blue-900 hover:text-blue-600"
+                    className="ml-2 text-blue-900 hover:text-blue-600 transition-colors"
                   >
                     ×
                   </button>
@@ -348,7 +348,7 @@ export default function ADREditPage() {
               will be preserved.
             </p>
           </div>
-        </>
+        </div>
       ) : (
         <div className="rounded-md border border-yellow-200 bg-yellow-50 px-3 py-2 text-sm text-yellow-700">
           You can only add or update alternative analysis for this ADR. Other
@@ -356,10 +356,14 @@ export default function ADREditPage() {
         </div>
       )}
 
-      <div className="space-y-2">
-        <h3 className="font-semibold">Alternative Analysis</h3>
+      <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-5 space-y-3">
+        <h3 className="text-lg font-semibold text-gray-900">Alternative Analysis</h3>
+
         {alternativeAnalysis.map((alt, ai) => (
-          <div key={ai} className="p-3 border rounded space-y-2">
+          <div
+            key={ai}
+            className="rounded-md border border-gray-200 bg-gray-50 p-4 space-y-3"
+          >
             <input
               value={alt.alternative}
               onChange={(e) => {
@@ -368,25 +372,25 @@ export default function ADREditPage() {
                 setAlternativeAnalysis(copy);
               }}
               placeholder={`Alternative ${ai + 1}`}
-              className="w-full border px-2 py-1 rounded"
+              className={inputClasses}
             />
 
             <div>
               <div className="flex items-center justify-between">
-                <span className="font-medium">Pros</span>
+                <span className="text-sm font-semibold text-green-700">Pros</span>
                 <button
                   onClick={() => {
                     const copy = [...alternativeAnalysis];
                     copy[ai].pros = [...(copy[ai].pros || []), ""];
                     setAlternativeAnalysis(copy);
                   }}
-                  className="text-sm text-green-600"
+                  className="text-sm font-medium text-green-600 hover:text-green-700 transition-colors"
                 >
                   + Add Pro
                 </button>
               </div>
               {(alt.pros || []).map((p, pi) => (
-                <div key={pi} className="flex gap-2 mt-1">
+                <div key={pi} className="flex gap-2 mt-1.5">
                   <input
                     value={p}
                     onChange={(e) => {
@@ -394,7 +398,7 @@ export default function ADREditPage() {
                       copy[ai].pros[pi] = e.target.value;
                       setAlternativeAnalysis(copy);
                     }}
-                    className="flex-1 border px-2 py-1 rounded"
+                    className={`${inputClasses} flex-1`}
                   />
                   <button
                     onClick={() => {
@@ -402,7 +406,7 @@ export default function ADREditPage() {
                       copy[ai].pros.splice(pi, 1);
                       setAlternativeAnalysis(copy);
                     }}
-                    className="text-red-600"
+                    className="text-sm font-medium text-red-600 hover:text-red-700 transition-colors"
                   >
                     Remove
                   </button>
@@ -412,20 +416,20 @@ export default function ADREditPage() {
 
             <div>
               <div className="flex items-center justify-between">
-                <span className="font-medium">Cons</span>
+                <span className="text-sm font-semibold text-red-700">Cons</span>
                 <button
                   onClick={() => {
                     const copy = [...alternativeAnalysis];
                     copy[ai].cons = [...(copy[ai].cons || []), ""];
                     setAlternativeAnalysis(copy);
                   }}
-                  className="text-sm text-green-600"
+                  className="text-sm font-medium text-green-600 hover:text-green-700 transition-colors"
                 >
                   + Add Con
                 </button>
               </div>
               {(alt.cons || []).map((c, ci) => (
-                <div key={ci} className="flex gap-2 mt-1">
+                <div key={ci} className="flex gap-2 mt-1.5">
                   <input
                     value={c}
                     onChange={(e) => {
@@ -433,7 +437,7 @@ export default function ADREditPage() {
                       copy[ai].cons[ci] = e.target.value;
                       setAlternativeAnalysis(copy);
                     }}
-                    className="flex-1 border px-2 py-1 rounded"
+                    className={`${inputClasses} flex-1`}
                   />
                   <button
                     onClick={() => {
@@ -441,7 +445,7 @@ export default function ADREditPage() {
                       copy[ai].cons.splice(ci, 1);
                       setAlternativeAnalysis(copy);
                     }}
-                    className="text-red-600"
+                    className="text-sm font-medium text-red-600 hover:text-red-700 transition-colors"
                   >
                     Remove
                   </button>
@@ -456,7 +460,7 @@ export default function ADREditPage() {
                   copy.splice(ai, 1);
                   setAlternativeAnalysis(copy);
                 }}
-                className="text-red-600 text-sm"
+                className="text-sm font-medium text-red-600 hover:text-red-700 transition-colors"
               >
                 Remove Alternative
               </button>
@@ -471,7 +475,8 @@ export default function ADREditPage() {
               { alternative: "", pros: [], cons: [] },
             ])
           }
-          className="px-3 py-1 bg-gray-100 rounded text-sm"
+          className="rounded-md bg-gray-100 hover:bg-gray-200 px-3 py-1.5 text-sm font-medium
+                     text-gray-700 transition-colors"
         >
           + Add Alternative
         </button>
@@ -480,7 +485,9 @@ export default function ADREditPage() {
       <button
         onClick={handleUpdate}
         disabled={submitting}
-        className="bg-blue-600 text-white px-4 py-2 rounded disabled:opacity-50"
+        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm
+                   font-medium shadow-sm transition-colors disabled:opacity-50
+                   disabled:cursor-not-allowed"
       >
         {submitting ? "Updating..." : "Update"}
       </button>

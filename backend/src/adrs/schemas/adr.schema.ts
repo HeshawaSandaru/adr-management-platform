@@ -56,7 +56,10 @@ export class Adr {
   @Prop()
   lessonsLearned!: string;
 
-  @Prop({ type: [{ type: MongooseSchema.Types.ObjectId, ref: 'Adr' }], default: [] })
+  @Prop({
+    type: [{ type: MongooseSchema.Types.ObjectId, ref: "Adr" }],
+    default: [],
+  })
   dependencies!: Types.ObjectId[];
 }
 

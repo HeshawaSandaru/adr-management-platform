@@ -17,13 +17,26 @@ import { Role } from "../common/enums/role.enum";
 import { AdrStatus } from "../common/enums/adr-status.enum";
 import { AdrQueryDto } from "./dto/adr-query.dto";
 import { UpdateAdrStatusDto } from "./dto/update-adr-status.dto";
+import { Review, ReviewDocument } from "../reviews/schemas/review.schema";
+import { User, UserDocument } from "../users/schemas/user.schema";
 
 @Injectable()
 export class AdrsService {
   constructor(
     @InjectModel(Adr.name)
     private readonly adrModel: Model<AdrDocument>,
+
+    @InjectModel(Review.name)
+    private readonly reviewModel: Model<ReviewDocument>,
+
+    @InjectModel(User.name)
+    private readonly userModel: Model<UserDocument>,
   ) {}
+
+  // Escapes regex special characters so user input can't break or hijack a $regex query
+  private escapeRegex(str: string): string {
+    return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  }
 
   // ✅ CREATE ADR (WITH JWT USER)
   async create(dto: CreateAdrDto, user: RequestWithUser["user"]) {
@@ -44,8 +57,20 @@ export class AdrsService {
       filter.status = query.status;
     }
 
-    if (query.authorId) {
-      filter.authorId = query.authorId;
+    if (query.authorName) {
+      const users = await this.userModel
+        .find({
+          name: {
+            $regex: this.escapeRegex(query.authorName),
+            $options: "i",
+          },
+        })
+        .select("_id")
+        .exec();
+
+      filter.authorId = {
+        $in: users.map((user) => user._id),
+      };
     }
 
     if (query.tags) {
@@ -58,8 +83,51 @@ export class AdrsService {
     }
 
     if (query.title) {
-      const escaped = query.title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const escaped = this.escapeRegex(query.title);
       filter.title = { $regex: escaped, $options: "i" };
+    }
+
+    if (query.fromDate || query.toDate) {
+      filter.createdAt = {};
+
+      if (query.fromDate) {
+        filter.createdAt.$gte = new Date(query.fromDate);
+      }
+
+      if (query.toDate) {
+        const endDate = new Date(query.toDate);
+
+        // include the whole day
+        endDate.setHours(23, 59, 59, 999);
+
+        filter.createdAt.$lte = endDate;
+      }
+    }
+
+    // Reviewer filter
+    if (query.reviewerName) {
+      const reviewers = await this.userModel
+        .find({
+          name: {
+            $regex: this.escapeRegex(query.reviewerName),
+            $options: "i",
+          },
+        })
+        .select("_id")
+        .exec();
+
+      const reviewedAdrs = await this.reviewModel
+        .find({
+          reviewerId: {
+            $in: reviewers.map((user) => user._id),
+          },
+        })
+        .distinct("adrId")
+        .exec();
+
+      filter._id = {
+        $in: reviewedAdrs.map((id) => new Types.ObjectId(id)),
+      };
     }
 
     const page = Math.max(1, query.page ?? 1);
@@ -70,13 +138,42 @@ export class AdrsService {
       this.adrModel
         .find(filter)
         .populate("authorId", "name email")
+        .populate("dependencies", "title status")
+        .sort({
+          createdAt: -1,
+        })
         .skip(skip)
         .limit(limit)
         .exec(),
       this.adrModel.countDocuments(filter).exec(),
     ]);
 
-    return { data, total, page, limit };
+    const adrIds = data.map((adr) => adr._id.toString());
+    const reviews =
+      adrIds.length > 0
+        ? await this.reviewModel
+            .find({ adrId: { $in: adrIds } })
+            .populate("reviewerId", "name email")
+            .exec()
+        : [];
+
+    const reviewsByAdrId = reviews.reduce<
+      Record<string, (typeof reviews)[number][]>
+    >((acc, review) => {
+      const key = review.adrId.toString();
+      if (!acc[key]) {
+        acc[key] = [];
+      }
+      acc[key].push(review);
+      return acc;
+    }, {});
+
+    const dataWithReviews = data.map((adr) => ({
+      ...adr.toObject(),
+      reviews: reviewsByAdrId[adr._id.toString()] ?? [],
+    }));
+
+    return { data: dataWithReviews, total, page, limit };
   }
 
   async getGraph() {
@@ -441,7 +538,7 @@ export class AdrsService {
   }
 
   // ==========================================================
-  // REMOVE DEPENDENCY
+  // GET DEPENDENCIES
   // ==========================================================
 
   async getDependencies(id: string) {

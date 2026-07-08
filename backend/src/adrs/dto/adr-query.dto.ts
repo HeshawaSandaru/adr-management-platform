@@ -6,6 +6,7 @@ import {
   IsInt,
   Min,
   IsMongoId,
+  IsDateString,
 } from "class-validator";
 import { AdrStatus } from "../../common/enums/adr-status.enum";
 import { Type } from 'class-transformer';
@@ -20,12 +21,32 @@ export class AdrQueryDto {
   authorId?: string;
 
   @IsOptional()
+  @IsMongoId()
+  reviewerId?: string;
+
+  @IsOptional()
+  @IsString()
+  authorName?: string;
+
+  @IsOptional()
+  @IsString()
+  reviewerName?: string;
+
+  @IsOptional()
   @IsString()
   tags?: string;
 
   @IsOptional()
   @IsString()
   title?: string;
+
+  @IsOptional()
+  @IsDateString()
+  fromDate?: string;
+
+  @IsOptional()
+  @IsDateString()
+  toDate?: string;
 
   @IsOptional()
   @Type(() => Number) // transforms query string "1" → number 1
