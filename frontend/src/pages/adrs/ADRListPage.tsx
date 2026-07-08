@@ -46,7 +46,7 @@ export default function ADRListPage() {
     return () => clearTimeout(handle);
   }, [search]);
 
-  // Load all ADRs (no pagination)
+  // Load ADRs with a large limit because filtering happens on frontend
   useEffect(() => {
     load();
   }, [status, tags, fromDate, toDate, debouncedSearch]);
@@ -62,6 +62,8 @@ export default function ADRListPage() {
         tags: tags || undefined,
         fromDate: fromDate || undefined,
         toDate: toDate || undefined,
+        page: 1,
+        limit: 100,
       });
 
       setAdrs(res.data);
@@ -193,6 +195,18 @@ export default function ADRListPage() {
             list="reviewer-options"
           />
           
+          <datalist id="author-options">
+  {authorOptions.map((author) => (
+    <option key={author} value={author} />
+  ))}
+</datalist>
+
+          <datalist id="reviewer-options">
+  {reviewerOptions.map((reviewer) => (
+    <option key={reviewer} value={reviewer} />
+  ))}
+</datalist>
+
           {/* Tags Filter */}
           <input
             className={`${inputClasses} w-44`}
@@ -234,6 +248,8 @@ export default function ADRListPage() {
             >
               Clear author/reviewer
             </button>
+
+            
           )}
         </div>
       </div>

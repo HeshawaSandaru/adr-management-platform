@@ -58,7 +58,7 @@ export interface AdrQuery {
   authorName?: string;
   reviewerName?: string;
   title?: string;
-  tags?: string; 
+  tags?: string;
   fromDate?: string;
   toDate?: string;
 }
@@ -121,14 +121,17 @@ export interface AdrGraph {
 
 export const AdrService = {
   /* -------- LIST ADRs -------- */
-  getAll: async (query: AdrQuery): Promise<AdrListResponse> => {
+  getAll: async (query: AdrQuery = {}): Promise<AdrListResponse> => {
     // Clean out empty variables to prevent broken string generation
-    const cleanedQuery = Object.entries(query).reduce((acc, [key, value]) => {
-      if (value !== undefined && value !== null && value !== "") {
-        acc[key] = value;
-      }
-      return acc;
-    }, {} as any);
+    const cleanedQuery = Object.entries(query).reduce(
+      (acc, [key, value]) => {
+        if (value !== undefined && value !== null && value !== "") {
+          acc[key] = value;
+        }
+        return acc;
+      },
+      {} as Record<string, unknown>,
+    );
 
     const res = await api.get("/adrs", { params: cleanedQuery });
     return res.data;

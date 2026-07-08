@@ -17,14 +17,6 @@ export class AdrQueryDto {
   status?: AdrStatus;
 
   @IsOptional()
-  @IsMongoId()
-  authorId?: string;
-
-  @IsOptional()
-  @IsMongoId()
-  reviewerId?: string;
-
-  @IsOptional()
   @IsString()
   authorName?: string;
 
