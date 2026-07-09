@@ -1,6 +1,15 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import api from "../api/axios";
 import { useAuth } from "../auth/AuthContext";
+import {
+  PieChart,
+  Pie,
+  Cell,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from "recharts";
 
 interface DashboardStats {
   totalAdrs: number;
@@ -21,18 +30,18 @@ interface RecentAdr {
   status: string;
   createdAt: string;
   authorId?: { name: string; email: string } | string;
+  reviews?: { reviewerId?: { name: string; email: string } | string }[];
+  tags?: string[];
 }
 
-// Matches the status badge palette used across ADRListPage / ADRDetailPage.
-const statusStyles: Record<string, string> = {
-  Draft: "bg-gray-100 text-gray-700",
-  Proposed: "bg-amber-100 text-amber-700",
-  Accepted: "bg-green-100 text-green-700",
-  Rejected: "bg-red-100 text-red-700",
-  Archived: "bg-slate-200 text-slate-600",
+const statusStyles: Record<string, { badge: string; dot: string }> = {
+  Draft: { badge: "bg-slate-100 text-slate-600 ring-slate-200", dot: "bg-slate-400" },
+  Proposed: { badge: "bg-amber-50 text-amber-700 ring-amber-200", dot: "bg-amber-500" },
+  Accepted: { badge: "bg-emerald-50 text-emerald-700 ring-emerald-200", dot: "bg-emerald-500" },
+  Rejected: { badge: "bg-rose-50 text-rose-700 ring-rose-200", dot: "bg-rose-500" },
+  Archived: { badge: "bg-gray-100 text-gray-500 ring-gray-200", dot: "bg-gray-400" },
 };
 
-// Accent color per stat card so the grid isn't a wall of identical boxes.
 const statAccents: Record<string, string> = {
   "Total ADRs": "border-t-blue-500",
   Draft: "border-t-gray-400",
@@ -40,15 +49,20 @@ const statAccents: Record<string, string> = {
   Accepted: "border-t-green-500",
   Rejected: "border-t-red-500",
   Archived: "border-t-slate-500",
-  "Total Reviews": "border-t-blue-500",
-  "Approved Reviews": "border-t-green-500",
-  "Rejected Reviews": "border-t-red-500",
-  "Changes Requested": "border-t-amber-500",
+};
+
+const statusColors: Record<string, string> = {
+  Draft: "#94a3b8",     // slate-400
+  Proposed: "#fbbf24",  // amber-400
+  Accepted: "#6ee7b7",  // emerald-300
+  Rejected: "#fb7185",  // rose-400
+  Archived: "#9ca3af",  // gray-400
 };
 
 export default function DashboardPage() {
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
+  const navigate = useNavigate();
 
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [recentAdrs, setRecentAdrs] = useState<RecentAdr[]>([]);
@@ -77,6 +91,37 @@ export default function DashboardPage() {
     loadDashboard();
   }, []);
 
+  const getAuthorLabel = (adr: RecentAdr) =>
+    typeof adr.authorId === "object" && adr.authorId !== null
+      ? adr.authorId.name || adr.authorId.email || "Unknown"
+      : (adr.authorId as unknown as string) || "Unknown";
+
+  const initials = (name: string) =>
+    name
+      .split(" ")
+      .map((p) => p[0])
+      .join("")
+      .slice(0, 2)
+      .toUpperCase();
+
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return "N/A";
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  };
+
+  const handleView = (id: string) => {
+    navigate(`/adrs/${id}`);
+  };
+
+  const handleEdit = (id: string) => {
+    navigate(`/adrs/${id}/edit`);
+  };
+
   if (loading) {
     return (
       <div className="max-w-7xl mx-auto px-4 py-6">
@@ -96,6 +141,14 @@ export default function DashboardPage() {
   }
 
   if (!stats) return null;
+
+  const statusData = [
+    { name: "Draft", value: stats.draft },
+    { name: "Proposed", value: stats.proposed },
+    { name: "Accepted", value: stats.accepted },
+    { name: "Rejected", value: stats.rejected },
+    { name: "Archived", value: stats.archived },
+  ].filter((entry) => entry.value > 0);
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-6 space-y-6">
@@ -117,67 +170,130 @@ export default function DashboardPage() {
         <StatCard label="Accepted" value={stats.accepted} />
         <StatCard label="Rejected" value={stats.rejected} />
         <StatCard label="Archived" value={stats.archived} />
-        <StatCard label="Total Reviews" value={stats.totalReviews} />
-        <StatCard label="Approved Reviews" value={stats.approvedReviews} />
-        <StatCard label="Rejected Reviews" value={stats.rejectedReviews} />
-        <StatCard
-          label="Changes Requested"
-          value={stats.changesRequestedReviews}
-        />
       </div>
 
-      <div className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
-        <div className="px-4 py-3 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900">Recent ADRs</h3>
+      {/* CHART + TABLE SIDE BY SIDE */}
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(280px,360px)_1fr] gap-6 items-stretch">
+        {/* STATUS PIE CHART */}
+        <div className="bg-white border border-gray-200/80 rounded-xl shadow-sm shadow-gray-200/50 p-5 flex flex-col">
+          <h3 className="text-lg font-semibold text-gray-900 mb-3">
+            ADR Status Breakdown
+          </h3>
+          {statusData.length === 0 ? (
+            <p className="text-sm text-gray-400 text-center py-10">
+              No ADRs to display yet
+            </p>
+          ) : (
+            <div className="flex-1 min-h-[280px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={statusData}
+                    dataKey="value"
+                    nameKey="name"
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={95}
+                    paddingAngle={2}
+                  >
+                    {statusData.map((entry) => (
+                      <Cell
+                        key={entry.name}
+                        fill={statusColors[entry.name] || "#9ca3af"}
+                      />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    formatter={(value, name) => [`${value ?? 0}`, name]}
+                  />
+                  <Legend
+                    verticalAlign="bottom"
+                    height={36}
+                    iconType="circle"
+                    iconSize={8}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          )}
         </div>
 
-        {recentAdrs.length === 0 ? (
-          <p className="text-sm text-gray-500 px-4 py-6 text-center">
-            No ADRs yet.
-          </p>
-        ) : (
+        {/* RECENT ADRS TABLE */}
+        <div className="bg-white border border-gray-200/80 rounded-xl shadow-sm shadow-gray-200/50 overflow-hidden flex flex-col">
+          <div className="px-5 py-3.5 border-b border-gray-200">
+            <h3 className="text-lg font-semibold text-gray-900">Recent ADRs</h3>
+          </div>
+
           <table className="w-full text-sm">
             <thead>
-              <tr
-                className="bg-gray-50 border-b border-gray-200 text-left text-xs
-                           font-semibold uppercase tracking-wide text-gray-500"
-              >
-                <th className="px-4 py-3">Title</th>
-                <th className="px-4 py-3">Status</th>
-                {isAdmin && <th className="px-4 py-3">Author</th>}
-                <th className="px-4 py-3">Created</th>
+              <tr className="bg-gray-50/80 border-b border-gray-200 text-left text-xs
+                             font-semibold uppercase tracking-wider text-gray-500">
+                <th className="px-5 py-3.5">Title</th>
+                <th className="px-5 py-3.5">Status</th>
+                {isAdmin && <th className="px-5 py-3.5">Author</th>}
+                <th className="px-5 py-3.5">Created</th>
               </tr>
             </thead>
+
             <tbody className="divide-y divide-gray-100">
-              {recentAdrs.map((adr) => (
-                <tr key={adr.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-4 py-3 font-medium text-gray-900">
-                    {adr.title}
-                  </td>
-                  <td className="px-4 py-3">
-                    <span
-                      className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${
-                        statusStyles[adr.status] || "bg-gray-100 text-gray-700"
-                      }`}
-                    >
-                      {adr.status}
-                    </span>
-                  </td>
-                  {isAdmin && (
-                    <td className="px-4 py-3 text-gray-700">
-                      {typeof adr.authorId === "object"
-                        ? adr.authorId?.name || adr.authorId?.email
-                        : "-"}
-                    </td>
-                  )}
-                  <td className="px-4 py-3 text-gray-500">
-                    {new Date(adr.createdAt).toLocaleDateString()}
+              {recentAdrs.length === 0 ? (
+                <tr>
+                  <td colSpan={isAdmin ? 5 : 4} className="py-16 text-center">
+                    <div className="flex flex-col items-center gap-2">
+                      <span className="text-3xl">📭</span>
+                      <p className="text-gray-500 font-medium">No ADRs found</p>
+                      <p className="text-gray-400 text-xs">
+                        Recent ADRs will show up here once created
+                      </p>
+                    </div>
                   </td>
                 </tr>
-              ))}
+              ) : (
+                recentAdrs.map((adr) => {
+                  const style = statusStyles[adr.status] || statusStyles.Draft;
+
+                  return (
+                    <tr
+                      key={adr.id}
+                      className="group hover:bg-indigo-50/30 transition-colors duration-150"
+                    >
+                      <td className="px-5 py-4 font-medium text-gray-900">
+                        {adr.title}
+                      </td>
+                      <td className="px-5 py-4">
+                        <span
+                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full
+                                      text-xs font-medium ring-1 ring-inset ${style.badge}`}
+                        >
+                          <span className={`h-1.5 w-1.5 rounded-full ${style.dot}`} />
+                          {adr.status}
+                        </span>
+                      </td>
+                      {isAdmin && (
+                        <td className="px-5 py-4">
+                          <div className="flex items-center gap-2">
+                            <div className="h-6 w-6 rounded-full bg-indigo-100 text-indigo-600
+                                            text-[10px] font-semibold flex items-center justify-center
+                                            shrink-0">
+                              {initials(getAuthorLabel(adr))}
+                            </div>
+                            <span className="text-gray-700">{getAuthorLabel(adr)}</span>
+                          </div>
+                        </td>
+                      )}
+                      <td className="px-5 py-4 text-gray-500 whitespace-nowrap">
+                        {formatDate(adr.createdAt)}
+                      </td>
+                      <td className="px-5 py-4 text-right whitespace-nowrap">
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
-        )}
+        </div>
       </div>
     </div>
   );
