@@ -8,17 +8,22 @@ import {
   UseGuards,
 } from '@nestjs/common';
 
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import {
+  ApiBearerAuth,
+  ApiBody,
+  ApiOperation,
+  ApiParam,
+  ApiResponse,
+  ApiTags,
+} from "@nestjs/swagger";
 
-import { ReviewsService } from './reviews.service';
-
-import { CreateReviewDto } from './dto/create-review.dto';
-
-import { RequestWithUser } from '../auth/interfaces/request-with-user.interface';
-
-import { ApiBearerAuth } from '@nestjs/swagger';
+import { JwtAuthGuard } from "../auth/jwt-auth.guard";
+import { ReviewsService } from "./reviews.service";
+import { CreateReviewDto } from "./dto/create-review.dto";
+import { RequestWithUser } from "../auth/interfaces/request-with-user.interface";
 
 @Controller('adrs/:adrId/reviews')
+@ApiTags("Reviews")
 @ApiBearerAuth('JWT-auth')
 @UseGuards(JwtAuthGuard)
 export class ReviewsController {
@@ -27,6 +32,37 @@ export class ReviewsController {
   ) {}
 
   @Post()
+   @ApiOperation({
+    summary:
+      'Create a review for an ADR',
+  })
+  @ApiParam({
+    name: 'adrId',
+    description: 'ADR ID',
+  })
+  @ApiBody({
+    type: CreateReviewDto,
+  })
+  @ApiResponse({
+    status: 201,
+    description:
+      'Review created successfully.',
+  })
+  @ApiResponse({
+    status: 400,
+    description:
+      'Invalid request or review already exists.',
+  })
+  @ApiResponse({
+    status: 403,
+    description:
+      'Authors cannot review their own ADR.',
+  })
+  @ApiResponse({
+    status: 404,
+    description:
+      'ADR not found.',
+  })
   create(
     @Param('adrId') adrId: string,
     @Body() dto: CreateReviewDto,
@@ -40,6 +76,24 @@ export class ReviewsController {
   }
 
   @Get()
+  @ApiOperation({
+    summary:
+      'Get all reviews for an ADR',
+  })
+  @ApiParam({
+    name: 'adrId',
+    description: 'ADR ID',
+  })
+  @ApiResponse({
+    status: 200,
+    description:
+      'Reviews retrieved successfully.',
+  })
+  @ApiResponse({
+    status: 404,
+    description:
+      'ADR not found.',
+  })
   findByAdr(
     @Param('adrId') adrId: string,
   ) {
