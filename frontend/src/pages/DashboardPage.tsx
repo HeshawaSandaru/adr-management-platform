@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import api from "../api/axios";
 import { useAuth } from "../auth/AuthContext";
 import {
@@ -62,7 +61,6 @@ const statusColors: Record<string, string> = {
 export default function DashboardPage() {
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
-  const navigate = useNavigate();
 
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [recentAdrs, setRecentAdrs] = useState<RecentAdr[]>([]);
@@ -112,14 +110,6 @@ export default function DashboardPage() {
       month: "short",
       day: "numeric",
     });
-  };
-
-  const handleView = (id: string) => {
-    navigate(`/adrs/${id}`);
-  };
-
-  const handleEdit = (id: string) => {
-    navigate(`/adrs/${id}/edit`);
   };
 
   if (loading) {
@@ -239,7 +229,7 @@ export default function DashboardPage() {
             <tbody className="divide-y divide-gray-100">
               {recentAdrs.length === 0 ? (
                 <tr>
-                  <td colSpan={isAdmin ? 5 : 4} className="py-16 text-center">
+                  <td colSpan={isAdmin ? 4 : 3} className="py-16 text-center">
                     <div className="flex flex-col items-center gap-2">
                       <span className="text-3xl">📭</span>
                       <p className="text-gray-500 font-medium">No ADRs found</p>
@@ -284,8 +274,6 @@ export default function DashboardPage() {
                       )}
                       <td className="px-5 py-4 text-gray-500 whitespace-nowrap">
                         {formatDate(adr.createdAt)}
-                      </td>
-                      <td className="px-5 py-4 text-right whitespace-nowrap">
                       </td>
                     </tr>
                   );
