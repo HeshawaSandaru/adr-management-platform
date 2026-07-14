@@ -54,6 +54,7 @@ export interface Review {
 export interface AdrQuery {
   page?: number;
   limit?: number;
+  search?: string;
   status?: AdrStatus;
   authorName?: string;
   reviewerName?: string;

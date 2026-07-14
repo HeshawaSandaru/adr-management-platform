@@ -6,11 +6,26 @@ import { useAuth } from "../../auth/AuthContext";
 import SearchBar from "../../components/SearchBar";
 
 const statusStyles: Record<string, { badge: string; dot: string }> = {
-  Draft: { badge: "bg-slate-100 text-slate-600 ring-slate-200", dot: "bg-slate-400" },
-  Proposed: { badge: "bg-amber-50 text-amber-700 ring-amber-200", dot: "bg-amber-500" },
-  Accepted: { badge: "bg-emerald-50 text-emerald-700 ring-emerald-200", dot: "bg-emerald-500" },
-  Rejected: { badge: "bg-rose-50 text-rose-700 ring-rose-200", dot: "bg-rose-500" },
-  Archived: { badge: "bg-gray-100 text-gray-500 ring-gray-200", dot: "bg-gray-400" },
+  Draft: {
+    badge: "bg-slate-100 text-slate-600 ring-slate-200",
+    dot: "bg-slate-400",
+  },
+  Proposed: {
+    badge: "bg-amber-50 text-amber-700 ring-amber-200",
+    dot: "bg-amber-500",
+  },
+  Accepted: {
+    badge: "bg-emerald-50 text-emerald-700 ring-emerald-200",
+    dot: "bg-emerald-500",
+  },
+  Rejected: {
+    badge: "bg-rose-50 text-rose-700 ring-rose-200",
+    dot: "bg-rose-500",
+  },
+  Archived: {
+    badge: "bg-gray-100 text-gray-500 ring-gray-200",
+    dot: "bg-gray-400",
+  },
 };
 
 export default function ADRListPage() {
@@ -19,6 +34,10 @@ export default function ADRListPage() {
 
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
+
+  const [page, setPage] = useState(1);
+  const limit = 10;
+  const [total, setTotal] = useState(0);
 
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
@@ -36,13 +55,17 @@ export default function ADRListPage() {
     "transition-all duration-150";
 
   useEffect(() => {
-    const handle = setTimeout(() => setDebouncedSearch(search), 400);
+    const handle = setTimeout(() => {
+      setDebouncedSearch(search);
+      setPage(1);
+    }, 400);
+
     return () => clearTimeout(handle);
   }, [search]);
 
   useEffect(() => {
     load();
-  }, [status, fromDate, toDate]);
+  }, [page, status, debouncedSearch, fromDate, toDate]);
 
   const load = async () => {
     setLoading(true);
@@ -50,14 +73,15 @@ export default function ADRListPage() {
 
     try {
       const res = await AdrService.getAll({
+        page,
+        limit,
         status: status || undefined,
+        search: debouncedSearch || undefined,
         fromDate: fromDate || undefined,
         toDate: toDate || undefined,
-        page: 1,
-        limit: 100,
       });
-
       setAdrs(res.data);
+      setTotal(res.total);
     } catch (err: any) {
       setError(err?.response?.data?.message || "Failed to load ADRs");
     }
@@ -97,24 +121,6 @@ export default function ADRListPage() {
       .slice(0, 2)
       .toUpperCase();
 
-  const filteredAdrs = useMemo(() => {
-    const query = debouncedSearch.trim().toLowerCase();
-    if (!query) return adrs;
-
-    return adrs.filter((adr) => {
-      const titleMatch = adr.title?.toLowerCase().includes(query);
-      const authorMatch = getAuthorLabel(adr).toLowerCase().includes(query);
-      const reviewerMatch = getReviewerLabels(adr).some((name) =>
-        name.toLowerCase().includes(query),
-      );
-      const tagsMatch = (adr.tags || []).some((tag) =>
-        tag.toLowerCase().includes(query),
-      );
-
-      return titleMatch || authorMatch || reviewerMatch || tagsMatch;
-    });
-  }, [adrs, debouncedSearch]);
-
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
@@ -125,7 +131,7 @@ export default function ADRListPage() {
               Architecture Decision Records
             </h1>
             <p className="text-sm text-gray-500 mt-1">
-              {adrs.length} total &middot; {filteredAdrs.length} shown
+              {adrs.length} total &middot; {adrs.length} shown
             </p>
           </div>
           <button
@@ -142,8 +148,10 @@ export default function ADRListPage() {
         </div>
 
         {/* FILTER BAR */}
-        <div className="bg-white/80 backdrop-blur-sm border border-gray-200/80 rounded-xl
-                        shadow-sm shadow-gray-200/50 p-4 mb-6 sticky top-4 z-10">
+        <div
+          className="bg-white/80 backdrop-blur-sm border border-gray-200/80 rounded-xl
+                        shadow-sm shadow-gray-200/50 p-4 mb-6 sticky top-4 z-10"
+        >
           <div className="flex flex-wrap gap-3 items-center">
             <div className="w-full sm:w-80">
               <SearchBar
@@ -156,7 +164,10 @@ export default function ADRListPage() {
             <select
               className={`${inputClasses} cursor-pointer`}
               value={status}
-              onChange={(e) => setStatus(e.target.value as AdrStatus | "")}
+              onChange={(e) => {
+                setStatus(e.target.value as AdrStatus | "");
+                setPage(1);
+              }}
             >
               <option value="">All Status</option>
               <option value="Draft">Draft</option>
@@ -170,7 +181,10 @@ export default function ADRListPage() {
               type="date"
               className={inputClasses}
               value={fromDate}
-              onChange={(e) => setFromDate(e.target.value)}
+              onChange={(e) => {
+                setFromDate(e.target.value);
+                setPage(1);
+              }}
             />
 
             <span className="text-gray-300 text-sm">to</span>
@@ -179,12 +193,18 @@ export default function ADRListPage() {
               type="date"
               className={inputClasses}
               value={toDate}
-              onChange={(e) => setToDate(e.target.value)}
+              onChange={(e) => {
+                setToDate(e.target.value);
+                setPage(1);
+              }}
             />
 
             {search && (
               <button
-                onClick={() => setSearch("")}
+                onClick={() => {
+                  setSearch("");
+                  setPage(1);
+                }}
                 className="px-3 py-2 rounded-lg text-sm font-medium text-gray-500
                            hover:text-gray-700 hover:bg-gray-100 transition-colors duration-150"
               >
@@ -195,8 +215,10 @@ export default function ADRListPage() {
         </div>
 
         {error && (
-          <div className="flex items-center gap-2 rounded-lg border border-rose-200 bg-rose-50
-                          px-4 py-3 text-sm text-rose-700 mb-4 shadow-sm">
+          <div
+            className="flex items-center gap-2 rounded-lg border border-rose-200 bg-rose-50
+                          px-4 py-3 text-sm text-rose-700 mb-4 shadow-sm"
+          >
             <span className="text-rose-400">⚠</span>
             {error}
           </div>
@@ -206,8 +228,10 @@ export default function ADRListPage() {
         <div className="bg-white border border-gray-200/80 rounded-xl shadow-sm shadow-gray-200/50 overflow-hidden">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-gray-50/80 border-b border-gray-200 text-left text-xs
-                             font-semibold uppercase tracking-wider text-gray-500">
+              <tr
+                className="bg-gray-50/80 border-b border-gray-200 text-left text-xs
+                             font-semibold uppercase tracking-wider text-gray-500"
+              >
                 <th className="px-5 py-3.5">Title</th>
                 <th className="px-5 py-3.5">Status</th>
                 <th className="px-5 py-3.5">Author</th>
@@ -229,7 +253,7 @@ export default function ADRListPage() {
                     ))}
                   </tr>
                 ))
-              ) : filteredAdrs.length === 0 ? (
+              ) : adrs.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="py-16 text-center">
                     <div className="flex flex-col items-center gap-2">
@@ -242,7 +266,7 @@ export default function ADRListPage() {
                   </td>
                 </tr>
               ) : (
-                filteredAdrs.map((adr) => {
+                adrs.map((adr) => {
                   const style = statusStyles[adr.status] || statusStyles.Draft;
                   const reviewers = getReviewerLabels(adr);
 
@@ -259,18 +283,24 @@ export default function ADRListPage() {
                           className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full
                                       text-xs font-medium ring-1 ring-inset ${style.badge}`}
                         >
-                          <span className={`h-1.5 w-1.5 rounded-full ${style.dot}`} />
+                          <span
+                            className={`h-1.5 w-1.5 rounded-full ${style.dot}`}
+                          />
                           {adr.status}
                         </span>
                       </td>
                       <td className="px-5 py-4">
                         <div className="flex items-center gap-2">
-                          <div className="h-6 w-6 rounded-full bg-indigo-100 text-indigo-600
+                          <div
+                            className="h-6 w-6 rounded-full bg-indigo-100 text-indigo-600
                                           text-[10px] font-semibold flex items-center justify-center
-                                          shrink-0">
+                                          shrink-0"
+                          >
                             {initials(getAuthorLabel(adr))}
                           </div>
-                          <span className="text-gray-700">{getAuthorLabel(adr)}</span>
+                          <span className="text-gray-700">
+                            {getAuthorLabel(adr)}
+                          </span>
                         </div>
                       </td>
                       <td className="px-5 py-4 text-gray-700">
@@ -328,6 +358,27 @@ export default function ADRListPage() {
               )}
             </tbody>
           </table>
+          <div className="flex items-center justify-between px-5 py-4 border-t">
+            <button
+              disabled={page === 1}
+              onClick={() => setPage((p) => p - 1)}
+              className="px-4 py-2 rounded-lg border text-sm
+               disabled:opacity-50"
+            >
+              Previous
+            </button>
+
+            <span className="text-sm text-gray-500">Page {page}</span>
+
+            <button
+              disabled={adrs.length < limit}
+              onClick={() => setPage((p) => p + 1)}
+              className="px-4 py-2 rounded-lg border text-sm
+               disabled:opacity-50"
+            >
+              Next
+            </button>
+          </div>
         </div>
       </div>
     </div>

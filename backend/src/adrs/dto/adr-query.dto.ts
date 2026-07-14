@@ -12,6 +12,11 @@ import { AdrStatus } from "../../common/enums/adr-status.enum";
 import { Type } from 'class-transformer';
 
 export class AdrQueryDto {
+  // adr-query.dto.ts
+  @IsOptional()
+  @IsString()
+  search?: string;
+
   @IsOptional()
   @IsEnum(AdrStatus)
   status?: AdrStatus;

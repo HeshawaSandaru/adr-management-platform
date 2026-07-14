@@ -202,18 +202,31 @@ export default function ADREditPage() {
             value={title}
             onChange={(e) => setTitle(e.target.value)}
           />
-          <TextInput
-            id="problem"
-            label="Problem"
-            value={problemStatement}
-            onChange={(e) => setProblemStatement(e.target.value)}
-          />
-          <TextInput
-            id="solution"
-            label="Solution"
-            value={proposedSolution}
-            onChange={(e) => setProposedSolution(e.target.value)}
-          />
+          <div>
+            <label htmlFor="problem" className={labelClasses}>
+              Problem Statement
+            </label>
+            <textarea
+              id="problem"
+              value={problemStatement}
+              onChange={(e) => setProblemStatement(e.target.value)}
+              rows={3}
+              className={inputClasses}
+            />
+          </div>
+
+          <div>
+            <label htmlFor="solution" className={labelClasses}>
+              Proposed Solution
+            </label>
+            <textarea
+              id="solution"
+              value={proposedSolution}
+              onChange={(e) => setProposedSolution(e.target.value)}
+              rows={3}
+              className={inputClasses}
+            />
+          </div>
 
           <div>
             <label htmlFor="expectedBenefits" className={labelClasses}>
@@ -308,7 +321,9 @@ export default function ADREditPage() {
                         onClick={() => handleSelectDependency(option)}
                         className="block w-full px-3 py-2 text-left text-sm hover:bg-gray-100 transition-colors"
                       >
-                        <div className="font-medium text-gray-900">{option.title}</div>
+                        <div className="font-medium text-gray-900">
+                          {option.title}
+                        </div>
                         <div className="text-xs text-gray-500">
                           Status: {option.status}
                         </div>
@@ -357,7 +372,9 @@ export default function ADREditPage() {
       )}
 
       <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-5 space-y-3">
-        <h3 className="text-lg font-semibold text-gray-900">Alternative Analysis</h3>
+        <h3 className="text-lg font-semibold text-gray-900">
+          Alternative Analysis
+        </h3>
 
         {alternativeAnalysis.map((alt, ai) => (
           <div
@@ -377,7 +394,9 @@ export default function ADREditPage() {
 
             <div>
               <div className="flex items-center justify-between">
-                <span className="text-sm font-semibold text-green-700">Pros</span>
+                <span className="text-sm font-semibold text-green-700">
+                  Pros
+                </span>
                 <button
                   onClick={() => {
                     const copy = [...alternativeAnalysis];

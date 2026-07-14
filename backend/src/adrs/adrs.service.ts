@@ -51,129 +51,152 @@ export class AdrsService {
   }
 
   async findAll(query: AdrQueryDto) {
-    const filter: any = {};
+    const matchStage: any = {};
 
     if (query.status) {
-      filter.status = query.status;
-    }
-
-    if (query.authorName) {
-      const users = await this.userModel
-        .find({
-          name: {
-            $regex: this.escapeRegex(query.authorName),
-            $options: "i",
-          },
-        })
-        .select("_id")
-        .exec();
-
-      filter.authorId = {
-        $in: users.map((user) => user._id),
-      };
-    }
-
-    if (query.tags) {
-      filter.tags = {
-        $in: query.tags
-          .split(",")
-          .map((t: string) => t.trim())
-          .filter(Boolean),
-      };
-    }
-
-    if (query.title) {
-      const escaped = this.escapeRegex(query.title);
-      filter.title = { $regex: escaped, $options: "i" };
+      matchStage.status = query.status;
     }
 
     if (query.fromDate || query.toDate) {
-      filter.createdAt = {};
-
-      if (query.fromDate) {
-        filter.createdAt.$gte = new Date(query.fromDate);
-      }
-
+      matchStage.createdAt = {};
+      if (query.fromDate) matchStage.createdAt.$gte = new Date(query.fromDate);
       if (query.toDate) {
         const endDate = new Date(query.toDate);
-
-        // include the whole day
         endDate.setHours(23, 59, 59, 999);
-
-        filter.createdAt.$lte = endDate;
+        matchStage.createdAt.$lte = endDate;
       }
-    }
-
-    // Reviewer filter
-    if (query.reviewerName) {
-      const reviewers = await this.userModel
-        .find({
-          name: {
-            $regex: this.escapeRegex(query.reviewerName),
-            $options: "i",
-          },
-        })
-        .select("_id")
-        .exec();
-
-      const reviewedAdrs = await this.reviewModel
-        .find({
-          reviewerId: {
-            $in: reviewers.map((user) => user._id),
-          },
-        })
-        .distinct("adrId")
-        .exec();
-
-      filter._id = {
-        $in: reviewedAdrs.map((id) => new Types.ObjectId(id)),
-      };
     }
 
     const page = Math.max(1, query.page ?? 1);
-    const limit = Math.min(100, query.limit ?? 20); // cap at 100
+    const limit = Math.min(100, query.limit ?? 20);
     const skip = (page - 1) * limit;
 
-    const [data, total] = await Promise.all([
-      this.adrModel
-        .find(filter)
-        .populate("authorId", "name email")
-        .populate("dependencies", "title status")
-        .sort({
-          createdAt: -1,
-        })
-        .skip(skip)
-        .limit(limit)
-        .exec(),
-      this.adrModel.countDocuments(filter).exec(),
-    ]);
+    const pipeline: any[] = [
+      { $match: matchStage },
 
-    const adrIds = data.map((adr) => adr._id.toString());
-    const reviews =
-      adrIds.length > 0
-        ? await this.reviewModel
-            .find({ adrId: { $in: adrIds } })
-            .populate("reviewerId", "name email")
-            .exec()
-        : [];
+      // join author, comparing as strings so type mismatches don't silently drop matches
+      {
+        $lookup: {
+          from: "users",
+          let: { authorId: "$authorId" },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $eq: [{ $toString: "$_id" }, { $toString: "$$authorId" }],
+                },
+              },
+            },
+            { $project: { name: 1, email: 1 } },
+          ],
+          as: "author",
+        },
+      },
+      { $unwind: { path: "$author", preserveNullAndEmptyArrays: true } },
 
-    const reviewsByAdrId = reviews.reduce<
-      Record<string, (typeof reviews)[number][]>
-    >((acc, review) => {
-      const key = review.adrId.toString();
-      if (!acc[key]) {
-        acc[key] = [];
-      }
-      acc[key].push(review);
-      return acc;
-    }, {});
+      // join reviews, and inside that join the reviewer
+      {
+        $lookup: {
+          from: "reviews",
+          let: { adrId: "$_id" },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $eq: [{ $toString: "$adrId" }, { $toString: "$$adrId" }],
+                },
+              },
+            },
+            {
+              $lookup: {
+                from: "users",
+                let: { reviewerId: "$reviewerId" },
+                pipeline: [
+                  {
+                    $match: {
+                      $expr: {
+                        $eq: [
+                          { $toString: "$_id" },
+                          { $toString: "$$reviewerId" },
+                        ],
+                      },
+                    },
+                  },
+                  { $project: { name: 1, email: 1 } },
+                ],
+                as: "reviewer",
+              },
+            },
+            {
+              $unwind: { path: "$reviewer", preserveNullAndEmptyArrays: true },
+            },
+          ],
+          as: "reviews",
+        },
+      },
+    ];
 
-    const dataWithReviews = data.map((adr) => ({
-      ...adr.toObject(),
-      reviews: reviewsByAdrId[adr._id.toString()] ?? [],
+    if (query.search) {
+      const regex = new RegExp(this.escapeRegex(query.search), "i");
+      pipeline.push({
+        $match: {
+          $or: [
+            { title: regex },
+            { tags: regex },
+            { "author.name": regex },
+            { "reviews.reviewer.name": regex },
+          ],
+        },
+      });
+    }
+
+    if (query.reviewerName) {
+      const regex = new RegExp(this.escapeRegex(query.reviewerName), "i");
+      pipeline.push({ $match: { "reviews.reviewer.name": regex } });
+    }
+
+    pipeline.push({
+      $facet: {
+        data: [
+          { $sort: { createdAt: -1 } },
+          { $skip: skip },
+          { $limit: limit },
+        ],
+        totalCount: [{ $count: "count" }],
+      },
+    });
+
+    const result = await this.adrModel.aggregate(pipeline).exec();
+    const data: any[] = result[0]?.data ?? [];
+    const total = result[0]?.totalCount?.[0]?.count ?? 0;
+
+    const populated = (await this.adrModel.populate(data, {
+      path: "dependencies",
+      select: "title status",
+    })) as any[];
+
+    const shaped = populated.map((adr: any) => ({
+      ...adr,
+      authorId: adr.author
+        ? {
+            _id: adr.author._id,
+            name: adr.author.name,
+            email: adr.author.email,
+          }
+        : adr.authorId,
+      reviews: (adr.reviews || []).map((r: any) => ({
+        ...r,
+        reviewerId: r.reviewer
+          ? {
+              _id: r.reviewer._id,
+              name: r.reviewer.name,
+              email: r.reviewer.email,
+            }
+          : r.reviewerId,
+      })),
     }));
 
-    return { data: dataWithReviews, total, page, limit };
+    return { data: shaped, total, page, limit };
   }
 
   async getGraph() {
