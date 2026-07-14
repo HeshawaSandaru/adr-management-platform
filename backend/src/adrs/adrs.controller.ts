@@ -70,9 +70,32 @@ export class AdrsController {
     required: false,
   })
   @ApiQuery({
-    name: 'authorId',
-    required: false,
-  })
+  name: 'authorName',
+  required: false,
+  description: 'Filter by author name',
+})
+@ApiQuery({
+  name: 'reviewerName',
+  required: false,
+  description: 'Filter by reviewer name',
+})
+@ApiQuery({
+  name: 'title',
+  required: false,
+  description: 'Filter by ADR title (partial match)',
+})
+@ApiQuery({
+  name: 'fromDate',
+  required: false,
+  description: 'Filter by creation date (from)',
+  example: '2024-01-01',
+})
+@ApiQuery({
+  name: 'toDate',
+  required: false,
+  description: 'Filter by creation date (to)',
+  example: '2024-12-31',
+})
   @ApiQuery({
     name: 'tags',
     required: false,
