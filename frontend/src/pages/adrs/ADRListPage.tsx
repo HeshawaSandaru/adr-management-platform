@@ -1,28 +1,59 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { AdrService, Adr } from "../../services/adr.service";
+
+import { AdrService, Adr, AdrStatus } from "../../services/adr.service";
 import { useAuth } from "../../auth/AuthContext";
 import SearchBar from "../../components/SearchBar";
+
+const statusStyles: Record<string, { badge: string; dot: string }> = {
+  Draft: {
+    badge: "bg-slate-100 text-slate-600 ring-slate-200",
+    dot: "bg-slate-400",
+  },
+  Proposed: {
+    badge: "bg-amber-50 text-amber-700 ring-amber-200",
+    dot: "bg-amber-500",
+  },
+  Accepted: {
+    badge: "bg-emerald-50 text-emerald-700 ring-emerald-200",
+    dot: "bg-emerald-500",
+  },
+  Rejected: {
+    badge: "bg-rose-50 text-rose-700 ring-rose-200",
+    dot: "bg-rose-500",
+  },
+  Archived: {
+    badge: "bg-gray-100 text-gray-500 ring-gray-200",
+    dot: "bg-gray-400",
+  },
+};
 
 export default function ADRListPage() {
   const [adrs, setAdrs] = useState<Adr[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const [page, setPage] = useState(1);
-  const [limit] = useState(10);
-  const [status, setStatus] = useState("");
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
+
+  const [page, setPage] = useState(1);
+  const limit = 10;
   const [total, setTotal] = useState(0);
+
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
+  const [status, setStatus] = useState<AdrStatus | "">("");
   const [error, setError] = useState("");
 
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
-
   const navigate = useNavigate();
 
-  // Debounce raw typing so we don't re-fetch (and re-render the table) on
-  // every keystroke — that was causing the search input to lose focus.
+  const inputClasses =
+    "border border-gray-200 rounded-lg px-3.5 py-2.5 text-sm text-gray-700 placeholder-gray-400 " +
+    "bg-white shadow-sm hover:border-gray-300 " +
+    "focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400 " +
+    "transition-all duration-150";
+
   useEffect(() => {
     const handle = setTimeout(() => {
       setDebouncedSearch(search);
@@ -34,7 +65,7 @@ export default function ADRListPage() {
 
   useEffect(() => {
     load();
-  }, [page, status, debouncedSearch]);
+  }, [page, status, debouncedSearch, fromDate, toDate]);
 
   const load = async () => {
     setLoading(true);
@@ -45,17 +76,12 @@ export default function ADRListPage() {
         page,
         limit,
         status: status || undefined,
-        title: debouncedSearch || undefined,
+        search: debouncedSearch || undefined,
+        fromDate: fromDate || undefined,
+        toDate: toDate || undefined,
       });
-
       setAdrs(res.data);
-      setTotal(res.total || 0);
-      setPage(res.page || page);
-
-      // 🔥 FIX: if page becomes empty (edge case), go back
-      if (res.data.length === 0 && page > 1) {
-        setPage((p) => p - 1);
-      }
+      setTotal(res.total);
     } catch (err: any) {
       setError(err?.response?.data?.message || "Failed to load ADRs");
     }
@@ -63,124 +89,297 @@ export default function ADRListPage() {
     setLoading(false);
   };
 
-  // server-driven pagination
-  const hasPrevPage = page > 1;
-  const hasNextPage = page * limit < (total || 0);
+  const getAuthorLabel = (adr: Adr) =>
+    typeof adr.authorId === "object" && adr.authorId !== null
+      ? adr.authorId.name || adr.authorId.email || "Unknown"
+      : (adr.authorId as unknown as string) || "Unknown";
+
+  const getReviewerLabels = (adr: Adr): string[] =>
+    adr.reviews?.length
+      ? adr.reviews.map((review) =>
+          typeof review.reviewerId === "object" && review.reviewerId !== null
+            ? review.reviewerId.name || review.reviewerId.email || "Unknown"
+            : "Unknown",
+        )
+      : [];
+
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return "N/A";
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  };
+
+  const initials = (name: string) =>
+    name
+      .split(" ")
+      .map((p) => p[0])
+      .join("")
+      .slice(0, 2)
+      .toUpperCase();
 
   return (
-    <div>
-      {/* HEADER */}
-      <div className="flex justify-between mb-4">
-        <div className="w-1/3">
-          <SearchBar value={search} onChange={(e) => setSearch(e.target.value)} />
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+        {/* HEADER */}
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight text-gray-900">
+              Architecture Decision Records
+            </h1>
+            <p className="text-sm text-gray-500 mt-1">
+              {adrs.length} total &middot; {adrs.length} shown
+            </p>
+          </div>
+          <button
+            onClick={() => navigate("/adrs/create")}
+            className="inline-flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-500
+                       active:bg-indigo-700 text-white px-4 py-2.5 rounded-lg
+                       text-sm font-medium shadow-sm shadow-indigo-600/20
+                       transition-all duration-150 hover:shadow-md hover:shadow-indigo-600/30
+                       hover:-translate-y-px"
+          >
+            <span className="text-base leading-none">+</span>
+            New ADR
+          </button>
         </div>
 
-        <select
-          className="border p-2 rounded"
-          value={status}
-          onChange={(e) => {
-            setStatus(e.target.value);
-            setPage(1); // 🔥 reset page on filter change
-          }}
+        {/* FILTER BAR */}
+        <div
+          className="bg-white/80 backdrop-blur-sm border border-gray-200/80 rounded-xl
+                        shadow-sm shadow-gray-200/50 p-4 mb-6 sticky top-4 z-10"
         >
-          <option value="">All Status</option>
-          <option value="Draft">Draft</option>
-          <option value="Proposed">Proposed</option>
-          <option value="Accepted">Accepted</option>
-          <option value="Rejected">Rejected</option>
-          <option value="Archived">Archived</option>
-        </select>
+          <div className="flex flex-wrap gap-3 items-center">
+            <div className="w-full sm:w-80">
+              <SearchBar
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search by title, author, reviewer, or tag..."
+              />
+            </div>
 
-        <button
-          onClick={() => navigate("/adrs/create")}
-          className="bg-blue-600 text-white px-4 py-2 rounded"
-        >
-          + Create ADR
-        </button>
-      </div>
+            <select
+              className={`${inputClasses} cursor-pointer`}
+              value={status}
+              onChange={(e) => {
+                setStatus(e.target.value as AdrStatus | "");
+                setPage(1);
+              }}
+            >
+              <option value="">All Status</option>
+              <option value="Draft">Draft</option>
+              <option value="Proposed">Proposed</option>
+              <option value="Accepted">Accepted</option>
+              <option value="Rejected">Rejected</option>
+              <option value="Archived">Archived</option>
+            </select>
 
-      {error && (
-        <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 mb-4">
-          {error}
+            <input
+              type="date"
+              className={inputClasses}
+              value={fromDate}
+              onChange={(e) => {
+                setFromDate(e.target.value);
+                setPage(1);
+              }}
+            />
+
+            <span className="text-gray-300 text-sm">to</span>
+
+            <input
+              type="date"
+              className={inputClasses}
+              value={toDate}
+              onChange={(e) => {
+                setToDate(e.target.value);
+                setPage(1);
+              }}
+            />
+
+            {search && (
+              <button
+                onClick={() => {
+                  setSearch("");
+                  setPage(1);
+                }}
+                className="px-3 py-2 rounded-lg text-sm font-medium text-gray-500
+                           hover:text-gray-700 hover:bg-gray-100 transition-colors duration-150"
+              >
+                Clear search
+              </button>
+            )}
+          </div>
         </div>
-      )}
 
-      {/* TABLE */}
-      <table className="w-full border">
-        <thead>
-          <tr>
-            <th>Title</th>
-            <th>Status</th>
-            <th>Author</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
+        {error && (
+          <div
+            className="flex items-center gap-2 rounded-lg border border-rose-200 bg-rose-50
+                          px-4 py-3 text-sm text-rose-700 mb-4 shadow-sm"
+          >
+            <span className="text-rose-400">⚠</span>
+            {error}
+          </div>
+        )}
 
-        <tbody>
-          {loading ? (
-            <tr>
-              <td colSpan={4} className="text-center text-gray-500 py-6">
-                Loading ADRs...
-              </td>
-            </tr>
-          ) : adrs.length === 0 ? (
-            <tr>
-              <td colSpan={4} className="text-center text-gray-500 py-6">
-                No ADRs found
-              </td>
-            </tr>
-          ) : (
-            adrs.map((adr) => (
-              <tr key={adr._id} className="border-t">
-                <td>{adr.title}</td>
-                <td>{adr.status}</td>
-                <td>
-                  {typeof adr.authorId === "object" && adr.authorId !== null
-                    ? adr.authorId.name
-                    : adr.authorId || "Unknown"}
-                </td>
-                <td className="space-x-2">
-                  <button
-                    onClick={() => navigate(`/adrs/${adr._id}`)}
-                    className="text-blue-600"
-                  >
-                    View
-                  </button>
-
-                  <button
-                    onClick={() => navigate(`/adrs/${adr._id}/edit`)}
-                    className="text-green-600"
-                  >
-                    Edit
-                  </button>
-                </td>
+        {/* TABLE */}
+        <div className="bg-white border border-gray-200/80 rounded-xl shadow-sm shadow-gray-200/50 overflow-hidden">
+          <table className="w-full text-sm">
+            <thead>
+              <tr
+                className="bg-gray-50/80 border-b border-gray-200 text-left text-xs
+                             font-semibold uppercase tracking-wider text-gray-500"
+              >
+                <th className="px-5 py-3.5">Title</th>
+                <th className="px-5 py-3.5">Status</th>
+                <th className="px-5 py-3.5">Author</th>
+                <th className="px-5 py-3.5">Reviewer</th>
+                <th className="px-5 py-3.5">Tags</th>
+                <th className="px-5 py-3.5">Created</th>
+                <th className="px-5 py-3.5 text-right">Actions</th>
               </tr>
-            ))
-          )}
-        </tbody>
-      </table>
+            </thead>
 
-      {/* PAGINATION */}
-      <div className="flex gap-2 mt-4 items-center">
-        <button
-          disabled={!hasPrevPage}
-          onClick={() => setPage((p) => p - 1)}
-          className="px-3 py-1 border rounded
-             disabled:opacity-40 disabled:cursor-not-allowed
-             disabled:bg-gray-200 disabled:text-gray-500"
-        >
-          Prev
-        </button>
+            <tbody className="divide-y divide-gray-100">
+              {loading ? (
+                Array.from({ length: 5 }).map((_, i) => (
+                  <tr key={i} className="animate-pulse">
+                    {Array.from({ length: 7 }).map((__, j) => (
+                      <td key={j} className="px-5 py-4">
+                        <div className="h-3.5 bg-gray-100 rounded-full w-full max-w-[8rem]" />
+                      </td>
+                    ))}
+                  </tr>
+                ))
+              ) : adrs.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="py-16 text-center">
+                    <div className="flex flex-col items-center gap-2">
+                      <span className="text-3xl">📭</span>
+                      <p className="text-gray-500 font-medium">No ADRs found</p>
+                      <p className="text-gray-400 text-xs">
+                        Try adjusting your search or filters
+                      </p>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                adrs.map((adr) => {
+                  const style = statusStyles[adr.status] || statusStyles.Draft;
+                  const reviewers = getReviewerLabels(adr);
 
-        <button
-          disabled={!hasNextPage}
-          onClick={() => setPage((p) => p + 1)}
-          className="px-3 py-1 border rounded
-             disabled:opacity-40 disabled:cursor-not-allowed
-             disabled:bg-gray-200 disabled:text-gray-500"
-        >
-          Next
-        </button>
+                  return (
+                    <tr
+                      key={adr._id}
+                      className="group hover:bg-indigo-50/30 transition-colors duration-150"
+                    >
+                      <td className="px-5 py-4 font-medium text-gray-900">
+                        {adr.title}
+                      </td>
+                      <td className="px-5 py-4">
+                        <span
+                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full
+                                      text-xs font-medium ring-1 ring-inset ${style.badge}`}
+                        >
+                          <span
+                            className={`h-1.5 w-1.5 rounded-full ${style.dot}`}
+                          />
+                          {adr.status}
+                        </span>
+                      </td>
+                      <td className="px-5 py-4">
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="h-6 w-6 rounded-full bg-indigo-100 text-indigo-600
+                                          text-[10px] font-semibold flex items-center justify-center
+                                          shrink-0"
+                          >
+                            {initials(getAuthorLabel(adr))}
+                          </div>
+                          <span className="text-gray-700">
+                            {getAuthorLabel(adr)}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-5 py-4 text-gray-700">
+                        {reviewers.length ? (
+                          <div className="flex flex-col gap-0.5">
+                            {reviewers.map((name, i) => (
+                              <span key={i}>{name}</span>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-gray-300">No reviewers</span>
+                        )}
+                      </td>
+                      <td className="px-5 py-4">
+                        {adr.tags?.length ? (
+                          <div className="flex flex-wrap gap-1">
+                            {adr.tags.map((tag) => (
+                              <span
+                                key={tag}
+                                className="rounded-full bg-indigo-50 px-2.5 py-1 text-xs
+                                           font-medium text-indigo-600 ring-1 ring-inset ring-indigo-100"
+                              >
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-gray-300">—</span>
+                        )}
+                      </td>
+                      <td className="px-5 py-4 text-gray-500 whitespace-nowrap">
+                        {formatDate(adr.createdAt)}
+                      </td>
+                      <td className="px-5 py-4 text-right whitespace-nowrap">
+                        <div className="inline-flex gap-1 opacity-70 group-hover:opacity-100 transition-opacity duration-150">
+                          <button
+                            onClick={() => navigate(`/adrs/${adr._id}`)}
+                            className="px-2.5 py-1.5 rounded-md text-indigo-600 hover:bg-indigo-100
+                                       font-medium transition-colors duration-150"
+                          >
+                            View
+                          </button>
+                          <button
+                            onClick={() => navigate(`/adrs/${adr._id}/edit`)}
+                            className="px-2.5 py-1.5 rounded-md text-emerald-600 hover:bg-emerald-100
+                                       font-medium transition-colors duration-150"
+                          >
+                            Edit
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+          <div className="flex items-center justify-between px-5 py-4 border-t">
+            <button
+              disabled={page === 1}
+              onClick={() => setPage((p) => p - 1)}
+              className="px-4 py-2 rounded-lg border text-sm
+               disabled:opacity-50"
+            >
+              Previous
+            </button>
+
+            <span className="text-sm text-gray-500">Page {page}</span>
+
+            <button
+              disabled={adrs.length < limit}
+              onClick={() => setPage((p) => p + 1)}
+              className="px-4 py-2 rounded-lg border text-sm
+               disabled:opacity-50"
+            >
+              Next
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );

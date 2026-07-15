@@ -1,36 +1,38 @@
 import api from "../api/axios";
 
+export type AdrStatus =
+  | "Draft"
+  | "Proposed"
+  | "Accepted"
+  | "Rejected"
+  | "Archived";
+
 export interface Adr {
+  reviews?: Review[];
   _id: string;
   title: string;
   problemStatement: string;
   proposedSolution: string;
-  status: string;
-
+  status: AdrStatus;
   tags: string[];
-
   expectedBenefits?: string;
   actualBenefits?: string;
   lessonsLearned?: string;
-
   alternativeAnalysis?: {
     alternative: string;
     pros?: string[];
     cons?: string[];
   }[];
-
   dependencies?: {
     _id: string;
     title: string;
-    status: string;
+    status: AdrStatus;
   }[];
-
   authorId: {
     _id: string;
     name: string;
     email: string;
   };
-
   createdAt: string;
   updatedAt?: string;
 }
@@ -52,10 +54,14 @@ export interface Review {
 export interface AdrQuery {
   page?: number;
   limit?: number;
-  status?: string;
-  authorId?: string;
+  search?: string;
+  status?: AdrStatus;
+  authorName?: string;
+  reviewerName?: string;
   title?: string;
-  tags?: string; // backend expects comma-separated string
+  tags?: string;
+  fromDate?: string;
+  toDate?: string;
 }
 
 export interface AdrListResponse {
@@ -69,19 +75,15 @@ export interface CreateAdrDto {
   title: string;
   problemStatement: string;
   proposedSolution: string;
-
   tags?: string[];
-
   expectedBenefits?: string;
   actualBenefits?: string;
   lessonsLearned?: string;
-
   alternativeAnalysis?: {
     alternative: string;
     pros?: string[];
     cons?: string[];
   }[];
-
   dependencies?: string[];
 }
 
@@ -89,33 +91,27 @@ export interface UpdateAdrDto {
   title?: string;
   problemStatement?: string;
   proposedSolution?: string;
-
-  status?: string;
-
   tags?: string[];
-
   expectedBenefits?: string;
   actualBenefits?: string;
   lessonsLearned?: string;
-
   alternativeAnalysis?: {
     alternative: string;
     pros?: string[];
     cons?: string[];
   }[];
-
   dependencies?: string[];
 }
 
 export interface GraphNode {
   id: string;
   title: string;
-  status: string;
+  status: AdrStatus;
   authorId?: string;
 }
 
 export interface GraphEdge {
-  from: string; // depends on `to`
+  from: string;
   to: string;
 }
 
@@ -126,8 +122,19 @@ export interface AdrGraph {
 
 export const AdrService = {
   /* -------- LIST ADRs -------- */
-  getAll: async (query: AdrQuery): Promise<AdrListResponse> => {
-    const res = await api.get("/adrs", { params: query });
+  getAll: async (query: AdrQuery = {}): Promise<AdrListResponse> => {
+    // Clean out empty variables to prevent broken string generation
+    const cleanedQuery = Object.entries(query).reduce(
+      (acc, [key, value]) => {
+        if (value !== undefined && value !== null && value !== "") {
+          acc[key] = value;
+        }
+        return acc;
+      },
+      {} as Record<string, unknown>,
+    );
+
+    const res = await api.get("/adrs", { params: cleanedQuery });
     return res.data;
   },
 
@@ -156,7 +163,7 @@ export const AdrService = {
   },
 
   /* -------- STATUS UPDATE -------- */
-  updateStatus: async (id: string, status: string): Promise<Adr> => {
+  updateStatus: async (id: string, status: AdrStatus): Promise<Adr> => {
     const res = await api.patch(`/adrs/${id}/status`, { status });
     return res.data;
   },

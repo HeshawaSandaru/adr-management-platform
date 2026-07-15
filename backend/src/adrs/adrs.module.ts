@@ -8,6 +8,8 @@ import {
 
 import { AdrsController } from './adrs.controller';
 import { AdrsService } from './adrs.service';
+import { Review, ReviewSchema } from '../reviews/schemas/review.schema';
+import { User, UserSchema } from "../users/schemas/user.schema";
 
 @Module({
   imports: [
@@ -15,6 +17,14 @@ import { AdrsService } from './adrs.service';
       {
         name: Adr.name,
         schema: AdrSchema,
+      },
+      {
+        name: Review.name,
+        schema: ReviewSchema,
+      },
+      {
+        name: User.name,
+        schema: UserSchema,
       },
     ]),
   ],

@@ -5,27 +5,32 @@ import {
   Max,
   IsInt,
   Min,
-  IsMongoId,
+  IsDateString,
 } from "class-validator";
 import { AdrStatus } from "../../common/enums/adr-status.enum";
 import { Type } from 'class-transformer';
 
 export class AdrQueryDto {
+  // adr-query.dto.ts
+  @IsOptional()
+  @IsString()
+  search?: string;
+
   @IsOptional()
   @IsEnum(AdrStatus)
   status?: AdrStatus;
 
   @IsOptional()
-  @IsMongoId()
-  authorId?: string;
+  @IsString()
+  reviewerName?: string;
 
   @IsOptional()
-  @IsString()
-  tags?: string;
+  @IsDateString()
+  fromDate?: string;
 
   @IsOptional()
-  @IsString()
-  title?: string;
+  @IsDateString()
+  toDate?: string;
 
   @IsOptional()
   @Type(() => Number) // transforms query string "1" → number 1

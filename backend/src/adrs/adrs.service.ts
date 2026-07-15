@@ -17,13 +17,26 @@ import { Role } from "../common/enums/role.enum";
 import { AdrStatus } from "../common/enums/adr-status.enum";
 import { AdrQueryDto } from "./dto/adr-query.dto";
 import { UpdateAdrStatusDto } from "./dto/update-adr-status.dto";
+import { Review, ReviewDocument } from "../reviews/schemas/review.schema";
+import { User, UserDocument } from "../users/schemas/user.schema";
 
 @Injectable()
 export class AdrsService {
   constructor(
     @InjectModel(Adr.name)
     private readonly adrModel: Model<AdrDocument>,
+
+    @InjectModel(Review.name)
+    private readonly reviewModel: Model<ReviewDocument>,
+
+    @InjectModel(User.name)
+    private readonly userModel: Model<UserDocument>,
   ) {}
+
+  // Escapes regex special characters so user input can't break or hijack a $regex query
+  private escapeRegex(str: string): string {
+    return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  }
 
   // ✅ CREATE ADR (WITH JWT USER)
   async create(dto: CreateAdrDto, user: RequestWithUser["user"]) {
@@ -38,45 +51,152 @@ export class AdrsService {
   }
 
   async findAll(query: AdrQueryDto) {
-    const filter: any = {};
+    const matchStage: any = {};
 
     if (query.status) {
-      filter.status = query.status;
+      matchStage.status = query.status;
     }
 
-    if (query.authorId) {
-      filter.authorId = query.authorId;
-    }
-
-    if (query.tags) {
-      filter.tags = {
-        $in: query.tags
-          .split(",")
-          .map((t: string) => t.trim())
-          .filter(Boolean),
-      };
-    }
-
-    if (query.title) {
-      const escaped = query.title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      filter.title = { $regex: escaped, $options: "i" };
+    if (query.fromDate || query.toDate) {
+      matchStage.createdAt = {};
+      if (query.fromDate) matchStage.createdAt.$gte = new Date(query.fromDate);
+      if (query.toDate) {
+        const endDate = new Date(query.toDate);
+        endDate.setHours(23, 59, 59, 999);
+        matchStage.createdAt.$lte = endDate;
+      }
     }
 
     const page = Math.max(1, query.page ?? 1);
-    const limit = Math.min(100, query.limit ?? 20); // cap at 100
+    const limit = Math.min(100, query.limit ?? 20);
     const skip = (page - 1) * limit;
 
-    const [data, total] = await Promise.all([
-      this.adrModel
-        .find(filter)
-        .populate("authorId", "name email")
-        .skip(skip)
-        .limit(limit)
-        .exec(),
-      this.adrModel.countDocuments(filter).exec(),
-    ]);
+    const pipeline: any[] = [
+      { $match: matchStage },
 
-    return { data, total, page, limit };
+      // join author, comparing as strings so type mismatches don't silently drop matches
+      {
+        $lookup: {
+          from: "users",
+          let: { authorId: "$authorId" },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $eq: [{ $toString: "$_id" }, { $toString: "$$authorId" }],
+                },
+              },
+            },
+            { $project: { name: 1, email: 1 } },
+          ],
+          as: "author",
+        },
+      },
+      { $unwind: { path: "$author", preserveNullAndEmptyArrays: true } },
+
+      // join reviews, and inside that join the reviewer
+      {
+        $lookup: {
+          from: "reviews",
+          let: { adrId: "$_id" },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $eq: [{ $toString: "$adrId" }, { $toString: "$$adrId" }],
+                },
+              },
+            },
+            {
+              $lookup: {
+                from: "users",
+                let: { reviewerId: "$reviewerId" },
+                pipeline: [
+                  {
+                    $match: {
+                      $expr: {
+                        $eq: [
+                          { $toString: "$_id" },
+                          { $toString: "$$reviewerId" },
+                        ],
+                      },
+                    },
+                  },
+                  { $project: { name: 1, email: 1 } },
+                ],
+                as: "reviewer",
+              },
+            },
+            {
+              $unwind: { path: "$reviewer", preserveNullAndEmptyArrays: true },
+            },
+          ],
+          as: "reviews",
+        },
+      },
+    ];
+
+    if (query.search) {
+      const regex = new RegExp(this.escapeRegex(query.search), "i");
+      pipeline.push({
+        $match: {
+          $or: [
+            { title: regex },
+            { tags: regex },
+            { "author.name": regex },
+            { "reviews.reviewer.name": regex },
+          ],
+        },
+      });
+    }
+
+    if (query.reviewerName) {
+      const regex = new RegExp(this.escapeRegex(query.reviewerName), "i");
+      pipeline.push({ $match: { "reviews.reviewer.name": regex } });
+    }
+
+    pipeline.push({
+      $facet: {
+        data: [
+          { $sort: { createdAt: -1 } },
+          { $skip: skip },
+          { $limit: limit },
+        ],
+        totalCount: [{ $count: "count" }],
+      },
+    });
+
+    const result = await this.adrModel.aggregate(pipeline).exec();
+    const data: any[] = result[0]?.data ?? [];
+    const total = result[0]?.totalCount?.[0]?.count ?? 0;
+
+    const populated = (await this.adrModel.populate(data, {
+      path: "dependencies",
+      select: "title status",
+    })) as any[];
+
+    const shaped = populated.map((adr: any) => ({
+      ...adr,
+      authorId: adr.author
+        ? {
+            _id: adr.author._id,
+            name: adr.author.name,
+            email: adr.author.email,
+          }
+        : adr.authorId,
+      reviews: (adr.reviews || []).map((r: any) => ({
+        ...r,
+        reviewerId: r.reviewer
+          ? {
+              _id: r.reviewer._id,
+              name: r.reviewer.name,
+              email: r.reviewer.email,
+            }
+          : r.reviewerId,
+      })),
+    }));
+
+    return { data: shaped, total, page, limit };
   }
 
   async getGraph() {
@@ -441,7 +561,7 @@ export class AdrsService {
   }
 
   // ==========================================================
-  // REMOVE DEPENDENCY
+  // GET DEPENDENCIES
   // ==========================================================
 
   async getDependencies(id: string) {
