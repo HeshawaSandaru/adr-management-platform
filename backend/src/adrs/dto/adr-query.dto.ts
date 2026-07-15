@@ -5,7 +5,6 @@ import {
   Max,
   IsInt,
   Min,
-  IsMongoId,
   IsDateString,
 } from "class-validator";
 import { AdrStatus } from "../../common/enums/adr-status.enum";
