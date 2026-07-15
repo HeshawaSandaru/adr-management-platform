@@ -23,19 +23,7 @@ export class AdrQueryDto {
 
   @IsOptional()
   @IsString()
-  authorName?: string;
-
-  @IsOptional()
-  @IsString()
   reviewerName?: string;
-
-  @IsOptional()
-  @IsString()
-  tags?: string;
-
-  @IsOptional()
-  @IsString()
-  title?: string;
 
   @IsOptional()
   @IsDateString()
