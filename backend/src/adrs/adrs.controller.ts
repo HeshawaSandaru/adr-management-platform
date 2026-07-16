@@ -10,7 +10,7 @@ import {
   Req,
   Query,
   Delete,
-} from '@nestjs/common';
+} from "@nestjs/common";
 import {
   ApiBearerAuth,
   ApiBody,
@@ -21,99 +21,89 @@ import {
   ApiTags,
 } from "@nestjs/swagger";
 
-import { AdrsService } from './adrs.service';
-import { CreateAdrDto } from './dto/create-adr.dto';
-import { UpdateAdrDto } from './dto/update-adr.dto';
+import { AdrsService } from "./adrs.service";
+import { CreateAdrDto } from "./dto/create-adr.dto";
+import { UpdateAdrDto } from "./dto/update-adr.dto";
 
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { RequestWithUser } from '../auth/interfaces/request-with-user.interface';
-import { UpdateAdrStatusDto } from './dto/update-adr-status.dto';
-import { AdrQueryDto } from './dto/adr-query.dto';
-import { AddDependencyDto } from './dto/add-dependency.dto';
+import { JwtAuthGuard } from "../auth/jwt-auth.guard";
+import { RequestWithUser } from "../auth/interfaces/request-with-user.interface";
+import { UpdateAdrStatusDto } from "./dto/update-adr-status.dto";
+import { AdrQueryDto } from "./dto/adr-query.dto";
+import { AddDependencyDto } from "./dto/add-dependency.dto";
 
 @Controller("adrs")
 @ApiBearerAuth("JWT-auth")
-@ApiTags('ADRs')
+@ApiTags("ADRs")
 @UseGuards(JwtAuthGuard)
 export class AdrsController {
   constructor(private readonly adrsService: AdrsService) {}
 
   @Post()
-   @ApiOperation({
-    summary: 'Create a new ADR',
+  @ApiOperation({
+    summary: "Create a new ADR",
   })
   @ApiBody({
     type: CreateAdrDto,
   })
   @ApiResponse({
     status: 201,
-    description: 'ADR created successfully.',
+    description: "ADR created successfully.",
   })
   @ApiResponse({
     status: 400,
-    description: 'Validation failed.',
+    description: "Validation failed.",
   })
   @ApiResponse({
     status: 401,
-    description: 'Unauthorized.',
+    description: "Unauthorized.",
   })
   create(@Body() dto: CreateAdrDto, @Req() req: RequestWithUser) {
     return this.adrsService.create(dto, req.user);
   }
 
   @Get()
-   @ApiOperation({
-    summary: 'Get all ADRs',
+  @ApiOperation({
+    summary: "Get all ADRs",
   })
   @ApiQuery({
-    name: 'status',
+    name: "status",
     required: false,
   })
   @ApiQuery({
-  name: 'authorName',
+  name: "search",
   required: false,
-  description: 'Filter by author name',
-})
-@ApiQuery({
-  name: 'reviewerName',
-  required: false,
-  description: 'Filter by reviewer name',
-})
-@ApiQuery({
-  name: 'title',
-  required: false,
-  description: 'Filter by ADR title (partial match)',
-})
-@ApiQuery({
-  name: 'fromDate',
-  required: false,
-  description: 'Filter by creation date (from)',
-  example: '2024-01-01',
-})
-@ApiQuery({
-  name: 'toDate',
-  required: false,
-  description: 'Filter by creation date (to)',
-  example: '2024-12-31',
+  description: "Search by title, tags, author name, or reviewer name",
 })
   @ApiQuery({
-    name: 'tags',
+    name: "reviewerName",
     required: false,
-    description: 'Comma-separated tags',
+    description: "Filter by reviewer name",
   })
   @ApiQuery({
-    name: 'page',
+    name: "fromDate",
+    required: false,
+    description: "Filter by creation date (from)",
+    example: "2024-01-01",
+  })
+  @ApiQuery({
+    name: "toDate",
+    required: false,
+    description: "Filter by creation date (to)",
+    example: "2024-12-31",
+  })
+  @ApiQuery({
+    name: "page",
     required: false,
     example: 1,
   })
   @ApiQuery({
-    name: 'limit',
+    name: "limit",
     required: false,
     example: 20,
   })
   @ApiResponse({
     status: 200,
-    description: 'List of ADRs.',
+    description: "List of ADRs.",
   })
   findAll(@Query() query: AdrQueryDto) {
     return this.adrsService.findAll(query);
@@ -121,31 +111,31 @@ export class AdrsController {
 
   @Get("graph")
   @ApiOperation({
-    summary: 'Get ADR dependency graph',
+    summary: "Get ADR dependency graph",
   })
   @ApiResponse({
     status: 200,
-    description: 'Dependency graph returned successfully.',
+    description: "Dependency graph returned successfully.",
   })
   getGraph() {
     return this.adrsService.getGraph();
   }
 
   @Get(":id")
-   @ApiOperation({
-    summary: 'Get ADR by ID',
+  @ApiOperation({
+    summary: "Get ADR by ID",
   })
   @ApiParam({
-    name: 'id',
-    description: 'ADR ID',
+    name: "id",
+    description: "ADR ID",
   })
   @ApiResponse({
     status: 200,
-    description: 'ADR found.',
+    description: "ADR found.",
   })
   @ApiResponse({
     status: 404,
-    description: 'ADR not found.',
+    description: "ADR not found.",
   })
   findOne(@Param("id") id: string) {
     return this.adrsService.findOne(id);
@@ -153,22 +143,22 @@ export class AdrsController {
 
   @Put(":id")
   @ApiOperation({
-    summary: 'Update an ADR',
+    summary: "Update an ADR",
   })
   @ApiParam({
-    name: 'id',
-    description: 'ADR ID',
+    name: "id",
+    description: "ADR ID",
   })
   @ApiBody({
     type: UpdateAdrDto,
   })
   @ApiResponse({
     status: 200,
-    description: 'ADR updated successfully.',
+    description: "ADR updated successfully.",
   })
   @ApiResponse({
     status: 404,
-    description: 'ADR not found.',
+    description: "ADR not found.",
   })
   update(
     @Param("id") id: string,
@@ -180,20 +170,19 @@ export class AdrsController {
 
   @Patch(":id/archive")
   @ApiOperation({
-    summary: 'Archive an ADR',
+    summary: "Archive an ADR",
   })
   @ApiParam({
-    name: 'id',
-    description: 'ADR ID',
+    name: "id",
+    description: "ADR ID",
   })
   @ApiResponse({
     status: 200,
-    description: 'ADR archived successfully.',
+    description: "ADR archived successfully.",
   })
   @ApiResponse({
     status: 403,
-    description:
-      'Only accepted or rejected ADRs can be archived.',
+    description: "Only accepted or rejected ADRs can be archived.",
   })
   archive(@Param("id") id: string, @Req() req: RequestWithUser) {
     return this.adrsService.archive(id, req.user);
@@ -201,18 +190,18 @@ export class AdrsController {
 
   @Patch(":id/status")
   @ApiOperation({
-    summary: 'Update ADR status',
+    summary: "Update ADR status",
   })
   @ApiParam({
-    name: 'id',
-    description: 'ADR ID',
+    name: "id",
+    description: "ADR ID",
   })
   @ApiBody({
     type: UpdateAdrStatusDto,
   })
   @ApiResponse({
     status: 200,
-    description: 'Status updated successfully.',
+    description: "Status updated successfully.",
   })
   updateStatus(
     @Param("id") id: string,
@@ -224,18 +213,18 @@ export class AdrsController {
 
   @Patch(":id/dependencies")
   @ApiOperation({
-    summary: 'Add ADR dependency',
+    summary: "Add ADR dependency",
   })
   @ApiParam({
-    name: 'id',
-    description: 'ADR ID',
+    name: "id",
+    description: "ADR ID",
   })
   @ApiBody({
     type: AddDependencyDto,
   })
   @ApiResponse({
     status: 200,
-    description: 'Dependency added successfully.',
+    description: "Dependency added successfully.",
   })
   addDependency(
     @Param("id") id: string,
@@ -247,19 +236,19 @@ export class AdrsController {
 
   @Delete(":id/dependencies/:dependencyId")
   @ApiOperation({
-    summary: 'Remove ADR dependency',
+    summary: "Remove ADR dependency",
   })
   @ApiParam({
-    name: 'id',
-    description: 'ADR ID',
+    name: "id",
+    description: "ADR ID",
   })
   @ApiParam({
-    name: 'dependencyId',
-    description: 'Dependency ADR ID',
+    name: "dependencyId",
+    description: "Dependency ADR ID",
   })
   @ApiResponse({
     status: 200,
-    description: 'Dependency removed successfully.',
+    description: "Dependency removed successfully.",
   })
   removeDependency(
     @Param("id") id: string,
@@ -271,15 +260,15 @@ export class AdrsController {
 
   @Get(":id/dependencies")
   @ApiOperation({
-    summary: 'Get ADR dependencies',
+    summary: "Get ADR dependencies",
   })
   @ApiParam({
-    name: 'id',
-    description: 'ADR ID',
+    name: "id",
+    description: "ADR ID",
   })
   @ApiResponse({
     status: 200,
-    description: 'Dependencies retrieved successfully.',
+    description: "Dependencies retrieved successfully.",
   })
   getDependencies(@Param("id") id: string) {
     return this.adrsService.getDependencies(id);

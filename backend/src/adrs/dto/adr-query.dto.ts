@@ -12,7 +12,10 @@ import { AdrStatus } from "../../common/enums/adr-status.enum";
 import { Type } from 'class-transformer';
 
 export class AdrQueryDto {
-  // adr-query.dto.ts
+  @ApiPropertyOptional({
+    description: 'Search by title, tags, author name, or reviewer name',
+    example: 'Migrate to Microservices',
+  })
   @IsOptional()
   @IsString()
   search?: string;
@@ -34,17 +37,21 @@ export class AdrQueryDto {
   @IsString()
   reviewerName?: string;
 
-  @ApiPropertyOptional({
-    description: 'Filter by tags (comma-separated)',
-    example: 'architecture,microservices'
+   @ApiPropertyOptional({
+    description: 'Filter by creation date (from)',
+    example: '2024-01-01',
+    format: 'date',
   })
   @IsOptional()
   @IsDateString()
   fromDate?: string;
+  @IsDateString()
+  fromDate?: string;
 
-   @ApiPropertyOptional({
-    description: 'Filter by title (partial match)',
-    example: 'Migrate to Microservices'
+  @ApiPropertyOptional({
+    description: 'Filter by creation date (to)',
+    example: '2024-12-31',
+    format: 'date',
   })
   @IsOptional()
   @IsDateString()
