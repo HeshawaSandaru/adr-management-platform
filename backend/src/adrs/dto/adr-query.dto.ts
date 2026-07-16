@@ -45,8 +45,6 @@ export class AdrQueryDto {
   @IsOptional()
   @IsDateString()
   fromDate?: string;
-  @IsDateString()
-  fromDate?: string;
 
   @ApiPropertyOptional({
     description: 'Filter by creation date (to)',
