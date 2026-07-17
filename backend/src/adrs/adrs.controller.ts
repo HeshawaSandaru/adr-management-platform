@@ -10,50 +10,156 @@ import {
   Req,
   Query,
   Delete,
-} from '@nestjs/common';
+} from "@nestjs/common";
+import {
+  ApiBearerAuth,
+  ApiBody,
+  ApiOperation,
+  ApiParam,
+  ApiQuery,
+  ApiResponse,
+  ApiTags,
+} from "@nestjs/swagger";
 
-import { AdrsService } from './adrs.service';
-import { CreateAdrDto } from './dto/create-adr.dto';
-import { UpdateAdrDto } from './dto/update-adr.dto';
+import { AdrsService } from "./adrs.service";
+import { CreateAdrDto } from "./dto/create-adr.dto";
+import { UpdateAdrDto } from "./dto/update-adr.dto";
 
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { RequestWithUser } from '../auth/interfaces/request-with-user.interface';
-import { ApiBearerAuth } from '@nestjs/swagger';
-import { UpdateAdrStatusDto } from './dto/update-adr-status.dto';
-import { AdrQueryDto } from './dto/adr-query.dto';
-import { AddDependencyDto } from './dto/add-dependency.dto';
+import { JwtAuthGuard } from "../auth/jwt-auth.guard";
+import { RequestWithUser } from "../auth/interfaces/request-with-user.interface";
+import { UpdateAdrStatusDto } from "./dto/update-adr-status.dto";
+import { AdrQueryDto } from "./dto/adr-query.dto";
+import { AddDependencyDto } from "./dto/add-dependency.dto";
 
 @Controller("adrs")
 @ApiBearerAuth("JWT-auth")
+@ApiTags("ADRs")
+@UseGuards(JwtAuthGuard)
 export class AdrsController {
   constructor(private readonly adrsService: AdrsService) {}
 
   @Post()
-  @UseGuards(JwtAuthGuard)
+  @ApiOperation({
+    summary: "Create a new ADR",
+  })
+  @ApiBody({
+    type: CreateAdrDto,
+  })
+  @ApiResponse({
+    status: 201,
+    description: "ADR created successfully.",
+  })
+  @ApiResponse({
+    status: 400,
+    description: "Validation failed.",
+  })
+  @ApiResponse({
+    status: 401,
+    description: "Unauthorized.",
+  })
   create(@Body() dto: CreateAdrDto, @Req() req: RequestWithUser) {
     return this.adrsService.create(dto, req.user);
   }
 
   @Get()
-  @UseGuards(JwtAuthGuard)
+  @ApiOperation({
+    summary: "Get all ADRs",
+  })
+  @ApiQuery({
+    name: "status",
+    required: false,
+  })
+  @ApiQuery({
+  name: "search",
+  required: false,
+  description: "Search by title, tags, author name, or reviewer name",
+})
+  @ApiQuery({
+    name: "reviewerName",
+    required: false,
+    description: "Filter by reviewer name",
+  })
+  @ApiQuery({
+    name: "fromDate",
+    required: false,
+    description: "Filter by creation date (from)",
+    example: "2024-01-01",
+  })
+  @ApiQuery({
+    name: "toDate",
+    required: false,
+    description: "Filter by creation date (to)",
+    example: "2024-12-31",
+  })
+  @ApiQuery({
+    name: "page",
+    required: false,
+    example: 1,
+  })
+  @ApiQuery({
+    name: "limit",
+    required: false,
+    example: 20,
+  })
+  @ApiResponse({
+    status: 200,
+    description: "List of ADRs.",
+  })
   findAll(@Query() query: AdrQueryDto) {
     return this.adrsService.findAll(query);
   }
 
   @Get("graph")
-  @UseGuards(JwtAuthGuard)
+  @ApiOperation({
+    summary: "Get ADR dependency graph",
+  })
+  @ApiResponse({
+    status: 200,
+    description: "Dependency graph returned successfully.",
+  })
   getGraph() {
     return this.adrsService.getGraph();
   }
 
   @Get(":id")
-  @UseGuards(JwtAuthGuard)
+  @ApiOperation({
+    summary: "Get ADR by ID",
+  })
+  @ApiParam({
+    name: "id",
+    description: "ADR ID",
+  })
+  @ApiResponse({
+    status: 200,
+    description: "ADR found.",
+  })
+  @ApiResponse({
+    status: 404,
+    description: "ADR not found.",
+  })
   findOne(@Param("id") id: string) {
     return this.adrsService.findOne(id);
   }
 
   @Put(":id")
-  @UseGuards(JwtAuthGuard)
+  @ApiOperation({
+    summary: "Update an ADR",
+  })
+  @ApiParam({
+    name: "id",
+    description: "ADR ID",
+  })
+  @ApiBody({
+    type: UpdateAdrDto,
+  })
+  @ApiResponse({
+    status: 200,
+    description: "ADR updated successfully.",
+  })
+  @ApiResponse({
+    status: 404,
+    description: "ADR not found.",
+  })
   update(
     @Param("id") id: string,
     @Body() dto: UpdateAdrDto,
@@ -63,13 +169,40 @@ export class AdrsController {
   }
 
   @Patch(":id/archive")
-  @UseGuards(JwtAuthGuard)
+  @ApiOperation({
+    summary: "Archive an ADR",
+  })
+  @ApiParam({
+    name: "id",
+    description: "ADR ID",
+  })
+  @ApiResponse({
+    status: 200,
+    description: "ADR archived successfully.",
+  })
+  @ApiResponse({
+    status: 403,
+    description: "Only accepted or rejected ADRs can be archived.",
+  })
   archive(@Param("id") id: string, @Req() req: RequestWithUser) {
     return this.adrsService.archive(id, req.user);
   }
 
   @Patch(":id/status")
-  @UseGuards(JwtAuthGuard)
+  @ApiOperation({
+    summary: "Update ADR status",
+  })
+  @ApiParam({
+    name: "id",
+    description: "ADR ID",
+  })
+  @ApiBody({
+    type: UpdateAdrStatusDto,
+  })
+  @ApiResponse({
+    status: 200,
+    description: "Status updated successfully.",
+  })
   updateStatus(
     @Param("id") id: string,
     @Body() dto: UpdateAdrStatusDto,
@@ -79,7 +212,20 @@ export class AdrsController {
   }
 
   @Patch(":id/dependencies")
-  @UseGuards(JwtAuthGuard)
+  @ApiOperation({
+    summary: "Add ADR dependency",
+  })
+  @ApiParam({
+    name: "id",
+    description: "ADR ID",
+  })
+  @ApiBody({
+    type: AddDependencyDto,
+  })
+  @ApiResponse({
+    status: 200,
+    description: "Dependency added successfully.",
+  })
   addDependency(
     @Param("id") id: string,
     @Body() dto: AddDependencyDto,
@@ -89,7 +235,21 @@ export class AdrsController {
   }
 
   @Delete(":id/dependencies/:dependencyId")
-  @UseGuards(JwtAuthGuard)
+  @ApiOperation({
+    summary: "Remove ADR dependency",
+  })
+  @ApiParam({
+    name: "id",
+    description: "ADR ID",
+  })
+  @ApiParam({
+    name: "dependencyId",
+    description: "Dependency ADR ID",
+  })
+  @ApiResponse({
+    status: 200,
+    description: "Dependency removed successfully.",
+  })
   removeDependency(
     @Param("id") id: string,
     @Param("dependencyId") dependencyId: string,
@@ -99,7 +259,17 @@ export class AdrsController {
   }
 
   @Get(":id/dependencies")
-  @UseGuards(JwtAuthGuard)
+  @ApiOperation({
+    summary: "Get ADR dependencies",
+  })
+  @ApiParam({
+    name: "id",
+    description: "ADR ID",
+  })
+  @ApiResponse({
+    status: 200,
+    description: "Dependencies retrieved successfully.",
+  })
   getDependencies(@Param("id") id: string) {
     return this.adrsService.getDependencies(id);
   }
